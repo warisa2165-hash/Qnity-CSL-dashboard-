@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme — QNITY corporate palette */
+    --background: 30 8% 95%; /* #F3F2F1 */
+    --foreground: 0 0% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+
+    --primary: 206 100% 42%; /* #0078D4 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 208 84% 40%; /* #106EBE */
+    --secondary-foreground: 0 0% 100%;
+
+    --success: 120 77% 27%; /* #107C10 */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 44 100% 50%; /* #FFB900 */
+    --warning-foreground: 0 0% 13%;
+
+    --destructive: 358 63% 51%; /* #D13438 */
+    --destructive-foreground: 0 0% 100%;
+
+    --muted: 30 6% 92%;
+    --muted-foreground: 30 2% 37%; /* #605E5C */
+
+    --accent: 206 100% 96%;
+    --accent-foreground: 206 100% 30%;
+
+    --border: 30 5% 87%;
+    --input: 30 5% 87%;
+    --ring: 206 100% 42%;
+
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-accent: 206 100% 96%;
+    --sidebar-border: 30 5% 89%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 220 13% 10%;
+    --foreground: 30 8% 95%;
+
+    --card: 220 13% 13%;
+    --card-foreground: 30 8% 95%;
+
+    --popover: 220 13% 13%;
+    --popover-foreground: 30 8% 95%;
+
+    --primary: 206 100% 52%;
+    --primary-foreground: 220 13% 10%;
+
+    --secondary: 208 84% 50%;
+    --secondary-foreground: 220 13% 10%;
+
+    --success: 120 45% 45%;
+    --success-foreground: 220 13% 10%;
+
+    --warning: 44 100% 55%;
+    --warning-foreground: 220 13% 10%;
+
+    --destructive: 358 70% 58%;
+    --destructive-foreground: 220 13% 10%;
+
+    --muted: 220 12% 18%;
+    --muted-foreground: 30 5% 65%;
+
+    --accent: 206 60% 20%;
+    --accent-foreground: 206 100% 85%;
+
+    --border: 220 10% 22%;
+    --input: 220 10% 22%;
+    --ring: 206 100% 52%;
+
+    --sidebar: 220 13% 12%;
+    --sidebar-foreground: 30 8% 90%;
+    --sidebar-accent: 206 55% 20%;
+    --sidebar-border: 220 10% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Keep focus rings visible for keyboard users on every browser. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Elements hidden when the executive report is printed to PDF. */
+  @media print {
+    .print\:hidden {
+      display: none !important;
+    }
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .no-print,
+  aside,
+  header {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+}

@@ -1,0 +1,785 @@
+// =========================================================
+// QNITY CSL Laboratory Renovation 2026
+// Project Dashboard Portal — database schema
+// =========================================================
+//
+// The first working version of the portal runs on the built-in mock
+// dataset (DATA_SOURCE=mock). This schema is the target shape for real
+// project data: populate it from Excel, SharePoint, Power BI or manual
+// admin input, then set DATA_SOURCE=prisma. See docs/DATA-INTEGRATION.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------
+// Users, roles, permissions and access control
+// ---------------------------------------------------------
+
+enum Role {
+  ADMIN
+  LEADERSHIP
+  PROJECT_TEAM
+  CONSULTANT
+  CONTRACTOR
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  DISABLED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id          String     @id @default(cuid())
+  /// Entra ID object id (oid claim), when signed in through Microsoft.
+  entraOid    String?    @unique
+  email       String     @unique
+  name        String
+  role        Role       @default(LEADERSHIP)
+  company     String
+  jobTitle    String     @default("")
+  status      UserStatus @default(PENDING)
+  isExternal  Boolean    @default(false)
+  avatarColor String     @default("#0078D4")
+
+  /// Per-user permission overrides, e.g. ["procurement:edit"].
+  /// Denials are evaluated after grants and always win.
+  grants   String[] @default([])
+  denials  String[] @default([])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  auditLogs        AuditLog[]
+  loginEvents      LoginEvent[]
+  uploadedDocs     Document[]        @relation("DocumentUploader")
+  uploadedPhotos   GalleryPhoto[]
+  decidedRequests  AccessRequest[]   @relation("RequestDecider")
+
+  @@index([role, status])
+}
+
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+  ipAddress String   @default("")
+  userAgent String   @default("")
+  provider  String   @default("microsoft-entra-id")
+  succeeded Boolean  @default(true)
+
+  @@index([userId, timestamp])
+}
+
+model AccessRequest {
+  id            String        @id @default(cuid())
+  name          String
+  email         String
+  company       String
+  requestedRole Role          @default(LEADERSHIP)
+  justification String
+  status        RequestStatus @default(PENDING)
+  requestedAt   DateTime      @default(now())
+  decidedAt     DateTime?
+  decidedById   String?
+  decidedBy     User?         @relation("RequestDecider", fields: [decidedById], references: [id])
+
+  @@index([status, requestedAt])
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  UPLOAD
+  DOWNLOAD
+  PERMISSION_CHANGE
+  ACCESS_DENIED
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  timestamp  DateTime    @default(now())
+  actorId    String?
+  actor      User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName  String
+  actorEmail String
+  action     AuditAction
+  entity     String
+  entityId   String
+  summary    String
+  ipAddress  String      @default("")
+  /// Before/after snapshot for change tracking.
+  metadata   Json?
+
+  @@index([timestamp])
+  @@index([entity, entityId])
+}
+
+// ---------------------------------------------------------
+// Project
+// ---------------------------------------------------------
+
+enum Health {
+  GREEN
+  YELLOW
+  RED
+}
+
+model Project {
+  id                   String   @id @default(cuid())
+  code                 String   @unique
+  name                 String
+  location             String
+  owner                String
+  administrator        String
+  consultant           String
+  contractor           String
+  objective            String
+  scopeSummary         String[]
+  startDate            DateTime
+  targetCompletionDate DateTime
+  targetHandoverDate   DateTime
+  currentPhase         String
+  status               String
+  health               Health   @default(GREEN)
+  overallProgress      Float    @default(0)
+  designProgress       Float    @default(0)
+  procurementProgress  Float    @default(0)
+  constructionProgress Float    @default(0)
+  safetyScore          Float    @default(100)
+  contractValue        Decimal  @db.Decimal(14, 2)
+  currency             String   @default("THB")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  stakeholders     Stakeholder[]
+  phases           ProjectPhase[]
+  milestones       Milestone[]
+  designPackages   DesignPackage[]
+  submissions      DocumentSubmission[]
+  procurement      ProcurementPackage[]
+  capexEquipment   CapexEquipment[]
+  paymentMilestones PaymentMilestone[]
+  risks            Risk[]
+  safetyReports    SafetyReport[]
+  actions          ActionItem[]
+  attentionItems   OwnerAttentionItem[]
+  documents        Document[]
+  galleryPhotos    GalleryPhoto[]
+  weeklyReports    WeeklyReport[]
+  progressPoints   ProgressPoint[]
+}
+
+model Stakeholder {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  role      String
+  company   String
+}
+
+/// Planned vs actual points for the executive S-curve.
+model ProgressPoint {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  month     String
+  sequence  Int
+  planned   Float
+  actual    Float?
+
+  @@unique([projectId, sequence])
+}
+
+enum PhaseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+  AT_RISK
+}
+
+model ProjectPhase {
+  id              String      @id @default(cuid())
+  projectId       String
+  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sequence        Int
+  name            String
+  plannedStart    DateTime
+  plannedFinish   DateTime
+  actualStart     DateTime?
+  actualFinish    DateTime?
+  status          PhaseStatus @default(NOT_STARTED)
+  progress        Float       @default(0)
+  owner           String
+  keyDeliverables String[]
+  delayReason     String?
+  recoveryPlan    String?
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([projectId, sequence])
+}
+
+// ---------------------------------------------------------
+// Milestones
+// ---------------------------------------------------------
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+  AT_RISK
+  CANCELLED
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  description String
+  plannedDate DateTime
+  actualDate  DateTime?
+  status      MilestoneStatus @default(NOT_STARTED)
+  owner       String
+  dependency  String?
+  phase       String
+  remarks     String          @default("")
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([projectId, code])
+  @@index([status, plannedDate])
+}
+
+// ---------------------------------------------------------
+// Design packages
+// ---------------------------------------------------------
+
+enum DesignReviewStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  COMMENTED
+  APPROVED
+  APPROVED_WITH_COMMENT
+  REJECTED
+}
+
+model DesignPackage {
+  id                  String             @id @default(cuid())
+  projectId           String
+  project             Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documentName        String
+  packageType         String
+  discipline          String
+  revision            String
+  responsibleParty    String
+  submittedDate       DateTime?
+  reviewStatus        DesignReviewStatus @default(NOT_STARTED)
+  ownerReviewComments String             @default("")
+  percentComplete     Float              @default(0)
+  nextSubmissionDate  DateTime?
+  status              String             @default("ON_TRACK")
+  pendingAction       String             @default("")
+  updatedAt           DateTime           @updatedAt
+
+  @@index([projectId, discipline])
+}
+
+// ---------------------------------------------------------
+// Document submission tracker
+// ---------------------------------------------------------
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  COMMENTED
+  REVISION_REQUIRED
+  APPROVED
+  APPROVED_WITH_COMMENT
+  REJECTED
+  SUPERSEDED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  APPROVED_WITH_COMMENT
+  REJECTED
+}
+
+model DocumentSubmission {
+  id                String            @id @default(cuid())
+  projectId         String
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code              String
+  title             String
+  documentType      String
+  submittedBy       String
+  submittedDate     DateTime
+  revision          String
+  status            SubmissionStatus  @default(SUBMITTED)
+  reviewer          String
+  reviewDueDate     DateTime
+  reviewResult      String?
+  commentStatus     String            @default("NONE")
+  approvalStatus    ApprovalStatus    @default(PENDING)
+  nextAction        String            @default("")
+  responsiblePerson String
+  attachmentUrl     String?
+  updatedAt         DateTime          @updatedAt
+
+  versions SubmissionVersion[]
+
+  @@unique([projectId, code])
+  @@index([status, reviewDueDate])
+}
+
+model SubmissionVersion {
+  id           String             @id @default(cuid())
+  submissionId String
+  submission   DocumentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  revision     String
+  date         DateTime
+  status       SubmissionStatus
+  by           String
+  note         String             @default("")
+
+  @@index([submissionId, date])
+}
+
+// ---------------------------------------------------------
+// Procurement
+// ---------------------------------------------------------
+
+enum ProcurementStage {
+  RFQ
+  QUOTATION_RECEIVED
+  TECHNICAL_REVIEW
+  COMMERCIAL_REVIEW
+  VENDOR_SELECTION
+  PO_REQUEST
+  PO_APPROVAL
+  PO_ISSUED
+  MANUFACTURING
+  SHIPPING
+  DELIVERY
+  INSTALLATION
+  COMMISSIONING
+}
+
+enum PoStatus {
+  NOT_STARTED
+  REQUESTED
+  PENDING_APPROVAL
+  ISSUED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model ProcurementPackage {
+  id                 String           @id @default(cuid())
+  projectId          String
+  project            Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code               String
+  packageName        String
+  vendor             String?
+  requester          String
+  buyer              String
+  budget             Decimal          @db.Decimal(14, 2)
+  stage              ProcurementStage @default(RFQ)
+  poStatus           PoStatus         @default(NOT_STARTED)
+  poNumber           String?
+  targetDeliveryDate DateTime
+  actualDeliveryDate DateTime?
+  riskStatus         RiskLevel        @default(LOW)
+  remarks            String           @default("")
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([projectId, code])
+  @@index([stage])
+}
+
+// ---------------------------------------------------------
+// CAPEX 2026 equipment
+// ---------------------------------------------------------
+
+enum StageStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+  NOT_APPLICABLE
+}
+
+model CapexEquipment {
+  id                         String      @id @default(cuid())
+  projectId                  String
+  project                    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code                       String
+  name                       String
+  category                   String
+  vendor                     String?
+  budget                     Decimal     @db.Decimal(14, 2)
+  capexNumber                String
+  rfqStatus                  StageStatus @default(NOT_STARTED)
+  technicalEvaluationStatus  StageStatus @default(NOT_STARTED)
+  commercialEvaluationStatus StageStatus @default(NOT_STARTED)
+  poStatus                   StageStatus @default(NOT_STARTED)
+  manufacturingStatus        StageStatus @default(NOT_STARTED)
+  shippingStatus             StageStatus @default(NOT_STARTED)
+  deliveryStatus             StageStatus @default(NOT_STARTED)
+  installationStatus         StageStatus @default(NOT_STARTED)
+  commissioningStatus        StageStatus @default(NOT_STARTED)
+  trainingStatus             StageStatus @default(NOT_STARTED)
+  owner                      String
+  targetDeliveryDate         DateTime
+  actualDeliveryDate         DateTime?
+  leadTimeWeeks              Int         @default(0)
+  isLongLead                 Boolean     @default(false)
+  riskLevel                  RiskLevel   @default(LOW)
+  remarks                    String      @default("")
+  updatedAt                  DateTime    @updatedAt
+
+  @@unique([projectId, code])
+  @@index([riskLevel])
+}
+
+// ---------------------------------------------------------
+// Payment milestones
+// ---------------------------------------------------------
+
+enum PaymentStatus {
+  NOT_DUE
+  PENDING_SUBMISSION
+  SUBMITTED
+  UNDER_VERIFICATION
+  APPROVED
+  HOLD
+  PAID
+  REJECTED
+}
+
+model PaymentMilestone {
+  id                String        @id @default(cuid())
+  projectId         String
+  project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code              String
+  description       String
+  percentage        Float
+  amount            Decimal       @db.Decimal(14, 2)
+  linkedDeliverable String
+  requiredEvidence  String[]
+  requiredApproval  String
+  status            PaymentStatus @default(NOT_DUE)
+  submittedDate     DateTime?
+  verifiedBy        String?
+  approvedBy        String?
+  readiness         Float         @default(0)
+  remarks           String        @default("")
+  updatedAt         DateTime      @updatedAt
+
+  checklist PaymentChecklistItem[]
+
+  @@unique([projectId, code])
+}
+
+model PaymentChecklistItem {
+  id        String           @id @default(cuid())
+  paymentId String
+  payment   PaymentMilestone @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  label     String
+  complete  Boolean          @default(false)
+  sequence  Int              @default(0)
+}
+
+// ---------------------------------------------------------
+// Risk
+// ---------------------------------------------------------
+
+enum RiskStatus {
+  OPEN
+  MITIGATING
+  CLOSED
+  ESCALATED
+}
+
+model Risk {
+  id                 String     @id @default(cuid())
+  projectId          String
+  project            Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code               String
+  description        String
+  category           String
+  owner              String
+  likelihood         Int
+  impact             Int
+  level              RiskLevel  @default(LOW)
+  mitigationPlan     String
+  dueDate            DateTime
+  status             RiskStatus @default(OPEN)
+  escalationRequired Boolean    @default(false)
+  remarks            String     @default("")
+  updatedAt          DateTime   @updatedAt
+
+  @@unique([projectId, code])
+  @@index([level, status])
+}
+
+// ---------------------------------------------------------
+// Safety
+// ---------------------------------------------------------
+
+enum SafetyCategory {
+  LTI
+  NEAR_MISS
+  FIRST_AID
+  OBSERVATION
+  INSPECTION
+  TOOLBOX_TALK
+  PERMIT_TO_WORK
+}
+
+enum SafetyStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+  OVERDUE
+}
+
+model SafetyReport {
+  id               String         @id @default(cuid())
+  projectId        String
+  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code             String
+  date             DateTime
+  reportedBy       String
+  description      String
+  category         SafetyCategory
+  severity         String         @default("LOW")
+  correctiveAction String         @default("")
+  owner            String
+  dueDate          DateTime
+  status           SafetyStatus   @default(OPEN)
+  evidenceUrl      String?
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([projectId, code])
+  @@index([date])
+}
+
+/// Monthly rollup powering the safety trend chart.
+model SafetyMonthlyStat {
+  id            String @id @default(cuid())
+  month         String
+  sequence      Int    @unique
+  lti           Int    @default(0)
+  nearMiss      Int    @default(0)
+  firstAid      Int    @default(0)
+  observations  Int    @default(0)
+  toolboxTalks  Int    @default(0)
+  manhours      Int    @default(0)
+  safetyScore   Float  @default(100)
+}
+
+// ---------------------------------------------------------
+// Actions
+// ---------------------------------------------------------
+
+enum ActionStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model ActionItem {
+  id              String       @id @default(cuid())
+  projectId       String
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code            String
+  description     String
+  owner           String
+  company         String
+  dueDate         DateTime
+  priority        Priority     @default(MEDIUM)
+  status          ActionStatus @default(OPEN)
+  sourceMeeting   String       @default("")
+  relatedDocument String?
+  comment         String       @default("")
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([projectId, code])
+  @@index([status, dueDate])
+}
+
+// ---------------------------------------------------------
+// Owner attention
+// ---------------------------------------------------------
+
+enum AttentionStatus {
+  OPEN
+  IN_REVIEW
+  DECIDED
+  OVERDUE
+}
+
+model OwnerAttentionItem {
+  id                    String          @id @default(cuid())
+  projectId             String
+  project               Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code                  String
+  topic                 String
+  description           String
+  category              String
+  escalationReason      String
+  requiredDecision      String
+  recommendedAction     String
+  decisionOwner         String
+  requestedDecisionDate DateTime
+  impactIfDelayed       String
+  relatedRisk           String?
+  relatedMilestone      String?
+  status                AttentionStatus @default(OPEN)
+  urgency               Health          @default(YELLOW)
+  remarks               String          @default("")
+  updatedAt             DateTime        @updatedAt
+
+  @@unique([projectId, code])
+}
+
+// ---------------------------------------------------------
+// Documents & gallery
+// ---------------------------------------------------------
+
+enum DocApprovalStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  SUPERSEDED
+  REJECTED
+}
+
+model Document {
+  id             String            @id @default(cuid())
+  projectId      String
+  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name           String
+  folder         String
+  category       String
+  revision       String
+  uploadedById   String?
+  uploadedBy     User?             @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedByName String
+  uploadedAt     DateTime          @default(now())
+  sizeKb         Int               @default(0)
+  fileType       String            @default("PDF")
+  approvalStatus DocApprovalStatus @default(DRAFT)
+  isLatest       Boolean           @default(true)
+  /// Null = visible to every role that can view the document centre.
+  restrictedTo   Role[]            @default([])
+  url            String?
+
+  versions DocumentVersion[]
+
+  @@index([projectId, folder])
+}
+
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  revision   String
+  uploadedAt DateTime @default(now())
+  uploadedBy String
+  url        String?
+
+  @@index([documentId, uploadedAt])
+}
+
+model GalleryPhoto {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  date           DateTime
+  category       String
+  uploadedById   String?
+  uploadedBy     User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedByName String
+  description    String   @default("")
+  location       String   @default("")
+  tags           String[]
+  url            String?
+  seed           Int      @default(0)
+
+  @@index([projectId, category])
+}
+
+// ---------------------------------------------------------
+// Weekly executive report
+// ---------------------------------------------------------
+
+model WeeklyReport {
+  id                  String   @id @default(cuid())
+  projectId           String
+  project             Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  weekNumber          Int
+  periodStart         DateTime
+  periodEnd           DateTime
+  publishedAt         DateTime @default(now())
+  preparedBy          String
+  overallStatus       Health   @default(GREEN)
+  overallProgress     Float    @default(0)
+  currentPhase        String
+  keyAchievements     String[]
+  activitiesCompleted String[]
+  safetySummary       String   @default("")
+  procurementSummary  String   @default("")
+  capexSummary        String   @default("")
+  topRisks            String[]
+  openIssues          String[]
+  managementAttention String[]
+  upcomingMilestones  String[]
+  nextWeekFocus       String[]
+  highlights          String[]
+
+  @@unique([projectId, weekNumber])
+}
