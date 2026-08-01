@@ -58,7 +58,9 @@ export const phases: ProjectPhase[] = [
     actualFinish: "2026-02-24",
     status: "COMPLETED",
     progress: 100,
+    plannedProgress: 100,
     owner: "Warisa Kantifong",
+    dependsOn: [],
     keyDeliverables: [
       "Project charter approved",
       "URS issued and approved",
@@ -78,7 +80,15 @@ export const phases: ProjectPhase[] = [
     actualFinish: null,
     status: "IN_PROGRESS",
     progress: 92,
+    plannedProgress: 100,
     owner: "Song Dong",
+    dependsOn: [
+      {
+        phaseId: "ph-1",
+        lagDays: -11,
+        note: "Design started 11 days before initiation closed, on the approved URS.",
+      },
+    ],
     keyDeliverables: [
       "Architectural and laboratory furniture layout approved",
       "HVAC and exhaust duct design approved",
@@ -101,7 +111,15 @@ export const phases: ProjectPhase[] = [
     actualFinish: null,
     status: "IN_PROGRESS",
     progress: 71,
+    plannedProgress: 78,
     owner: "Rita Tang",
+    dependsOn: [
+      {
+        phaseId: "ph-1",
+        lagDays: 3,
+        note: "Tendering opens once the SOW is approved at the end of initiation.",
+      },
+    ],
     keyDeliverables: [
       "Main contractor award to Design Alternative",
       "CAPEX 2026 equipment purchase orders issued",
@@ -123,7 +141,15 @@ export const phases: ProjectPhase[] = [
     actualFinish: null,
     status: "AT_RISK",
     progress: 41,
+    plannedProgress: 50,
     owner: "Nattapong Wongsiri",
+    dependsOn: [
+      {
+        phaseId: "ph-2",
+        lagDays: -22,
+        note: "Construction overlaps design by 22 days, working to the released IFC packages.",
+      },
+    ],
     keyDeliverables: [
       "Demolition and site preparation",
       "Partition, ceiling and flooring works",
@@ -147,7 +173,20 @@ export const phases: ProjectPhase[] = [
     actualFinish: null,
     status: "NOT_STARTED",
     progress: 0,
+    plannedProgress: 0,
     owner: "Rattiya Janpum",
+    dependsOn: [
+      {
+        phaseId: "ph-4",
+        lagDays: -39,
+        note: "Pre-commissioning starts 39 days before mechanical completion, zone by zone.",
+      },
+      {
+        phaseId: "ph-3",
+        lagDays: 5,
+        note: "Equipment must be delivered and installed before qualification can start.",
+      },
+    ],
     keyDeliverables: [
       "HVAC and pressure cascade balancing",
       "Exhaust system performance test",
@@ -168,7 +207,15 @@ export const phases: ProjectPhase[] = [
     actualFinish: null,
     status: "NOT_STARTED",
     progress: 0,
+    plannedProgress: 0,
     owner: "Warisa Kantifong",
+    dependsOn: [
+      {
+        phaseId: "ph-5",
+        lagDays: -4,
+        note: "Handover documentation runs in parallel with the final 4 days of commissioning.",
+      },
+    ],
     keyDeliverables: [
       "Punch list closure",
       "As-built drawing package",

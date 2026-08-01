@@ -86,6 +86,7 @@ export const repository = {
   async getPhases(): Promise<ProjectPhase[]> {
     const rows = await prisma.projectPhase.findMany({
       orderBy: { sequence: "asc" },
+      include: { dependsOn: true },
     });
     return rows.map((r) => ({
       id: r.id,
@@ -97,8 +98,14 @@ export const repository = {
       actualFinish: d(r.actualFinish),
       status: r.status,
       progress: r.progress,
+      plannedProgress: r.plannedProgress,
       owner: r.owner,
       keyDeliverables: r.keyDeliverables,
+      dependsOn: r.dependsOn.map((d) => ({
+        phaseId: d.predecessorId,
+        lagDays: d.lagDays,
+        note: d.note,
+      })),
       delayReason: r.delayReason,
       recoveryPlan: r.recoveryPlan,
     }));
@@ -115,6 +122,7 @@ export const repository = {
       description: r.description,
       plannedDate: dReq(r.plannedDate),
       actualDate: d(r.actualDate),
+      forecastDate: d(r.forecastDate),
       status: r.status,
       owner: r.owner,
       dependency: r.dependency,

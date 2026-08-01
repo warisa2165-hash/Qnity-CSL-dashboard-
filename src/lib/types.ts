@@ -114,6 +114,20 @@ export type PhaseStatus =
   | "DELAYED"
   | "AT_RISK";
 
+/**
+ * A schedule link between two phases, expressed as finish-to-start with a
+ * lag. A negative lag is an overlap — which is how the CSL phases actually
+ * run (construction starts before design is fully issued). Lags are set so
+ * the network reproduces the approved baseline exactly, which is what lets
+ * the critical path calculation be trusted.
+ */
+export interface PhaseDependency {
+  phaseId: string;
+  lagDays: number;
+  /** Why the phases are linked — shown on the critical path panel. */
+  note: string;
+}
+
 export interface ProjectPhase {
   id: string;
   sequence: number;
@@ -124,8 +138,15 @@ export interface ProjectPhase {
   actualFinish: string | null;
   status: PhaseStatus;
   progress: number;
+  /**
+   * Progress the approved baseline expects at the current data date.
+   * Actual-versus-this is the schedule performance index, and it is the only
+   * honest way to judge a phase whose planned curve is not linear.
+   */
+  plannedProgress: number;
   owner: string;
   keyDeliverables: string[];
+  dependsOn: PhaseDependency[];
   delayReason: string | null;
   recoveryPlan: string | null;
 }
@@ -149,6 +170,12 @@ export interface Milestone {
   description: string;
   plannedDate: string;
   actualDate: string | null;
+  /**
+   * Date the project has formally committed to when it differs from the
+   * baseline. Where this is null the forecast is derived from the slip of
+   * the owning phase, so every open milestone still carries a forecast.
+   */
+  forecastDate: string | null;
   status: MilestoneStatus;
   owner: string;
   dependency: string | null;

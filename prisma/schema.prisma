@@ -56,18 +56,18 @@ model User {
 
   /// Per-user permission overrides, e.g. ["procurement:edit"].
   /// Denials are evaluated after grants and always win.
-  grants   String[] @default([])
-  denials  String[] @default([])
+  grants  String[] @default([])
+  denials String[] @default([])
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
-  auditLogs        AuditLog[]
-  loginEvents      LoginEvent[]
-  uploadedDocs     Document[]        @relation("DocumentUploader")
-  uploadedPhotos   GalleryPhoto[]
-  decidedRequests  AccessRequest[]   @relation("RequestDecider")
+  auditLogs       AuditLog[]
+  loginEvents     LoginEvent[]
+  uploadedDocs    Document[]      @relation("DocumentUploader")
+  uploadedPhotos  GalleryPhoto[]
+  decidedRequests AccessRequest[] @relation("RequestDecider")
 
   @@index([role, status])
 }
@@ -171,22 +171,22 @@ model Project {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  stakeholders     Stakeholder[]
-  phases           ProjectPhase[]
-  milestones       Milestone[]
-  designPackages   DesignPackage[]
-  submissions      DocumentSubmission[]
-  procurement      ProcurementPackage[]
-  capexEquipment   CapexEquipment[]
+  stakeholders      Stakeholder[]
+  phases            ProjectPhase[]
+  milestones        Milestone[]
+  designPackages    DesignPackage[]
+  submissions       DocumentSubmission[]
+  procurement       ProcurementPackage[]
+  capexEquipment    CapexEquipment[]
   paymentMilestones PaymentMilestone[]
-  risks            Risk[]
-  safetyReports    SafetyReport[]
-  actions          ActionItem[]
-  attentionItems   OwnerAttentionItem[]
-  documents        Document[]
-  galleryPhotos    GalleryPhoto[]
-  weeklyReports    WeeklyReport[]
-  progressPoints   ProgressPoint[]
+  risks             Risk[]
+  safetyReports     SafetyReport[]
+  actions           ActionItem[]
+  attentionItems    OwnerAttentionItem[]
+  documents         Document[]
+  galleryPhotos     GalleryPhoto[]
+  weeklyReports     WeeklyReport[]
+  progressPoints    ProgressPoint[]
 }
 
 model Stakeholder {
@@ -231,13 +231,35 @@ model ProjectPhase {
   actualFinish    DateTime?
   status          PhaseStatus @default(NOT_STARTED)
   progress        Float       @default(0)
+  /// Progress the approved baseline expects at the current data date.
+  /// Actual-versus-this is the schedule performance index.
+  plannedProgress Float       @default(0)
   owner           String
   keyDeliverables String[]
   delayReason     String?
   recoveryPlan    String?
   updatedAt       DateTime    @updatedAt
 
+  dependsOn PhaseDependency[] @relation("PhaseSuccessor")
+  drives    PhaseDependency[] @relation("PhasePredecessor")
+
   @@unique([projectId, sequence])
+}
+
+/// Finish-to-start link between two phases, with a lag in calendar days.
+/// A negative lag is an overlap, which is how the CSL phases actually run.
+/// Lags are set so the network reproduces the approved baseline exactly.
+model PhaseDependency {
+  id            String       @id @default(cuid())
+  /// The phase that depends on `predecessor`.
+  successorId   String
+  successor     ProjectPhase @relation("PhaseSuccessor", fields: [successorId], references: [id], onDelete: Cascade)
+  predecessorId String
+  predecessor   ProjectPhase @relation("PhasePredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+  lagDays       Int          @default(0)
+  note          String       @default("")
+
+  @@unique([successorId, predecessorId])
 }
 
 // ---------------------------------------------------------
@@ -254,20 +276,23 @@ enum MilestoneStatus {
 }
 
 model Milestone {
-  id          String          @id @default(cuid())
-  projectId   String
-  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  code        String
-  name        String
-  description String
-  plannedDate DateTime
-  actualDate  DateTime?
-  status      MilestoneStatus @default(NOT_STARTED)
-  owner       String
-  dependency  String?
-  phase       String
-  remarks     String          @default("")
-  updatedAt   DateTime        @updatedAt
+  id           String          @id @default(cuid())
+  projectId    String
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  description  String
+  plannedDate  DateTime
+  actualDate   DateTime?
+  /// Committed forecast where it differs from the baseline. Null means the
+  /// forecast is derived from the owning phase's slip.
+  forecastDate DateTime?
+  status       MilestoneStatus @default(NOT_STARTED)
+  owner        String
+  dependency   String?
+  phase        String
+  remarks      String          @default("")
+  updatedAt    DateTime        @updatedAt
 
   @@unique([projectId, code])
   @@index([status, plannedDate])
@@ -333,25 +358,25 @@ enum ApprovalStatus {
 }
 
 model DocumentSubmission {
-  id                String            @id @default(cuid())
+  id                String           @id @default(cuid())
   projectId         String
-  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   code              String
   title             String
   documentType      String
   submittedBy       String
   submittedDate     DateTime
   revision          String
-  status            SubmissionStatus  @default(SUBMITTED)
+  status            SubmissionStatus @default(SUBMITTED)
   reviewer          String
   reviewDueDate     DateTime
   reviewResult      String?
-  commentStatus     String            @default("NONE")
-  approvalStatus    ApprovalStatus    @default(PENDING)
-  nextAction        String            @default("")
+  commentStatus     String           @default("NONE")
+  approvalStatus    ApprovalStatus   @default(PENDING)
+  nextAction        String           @default("")
   responsiblePerson String
   attachmentUrl     String?
-  updatedAt         DateTime          @updatedAt
+  updatedAt         DateTime         @updatedAt
 
   versions SubmissionVersion[]
 
@@ -599,16 +624,16 @@ model SafetyReport {
 
 /// Monthly rollup powering the safety trend chart.
 model SafetyMonthlyStat {
-  id            String @id @default(cuid())
-  month         String
-  sequence      Int    @unique
-  lti           Int    @default(0)
-  nearMiss      Int    @default(0)
-  firstAid      Int    @default(0)
-  observations  Int    @default(0)
-  toolboxTalks  Int    @default(0)
-  manhours      Int    @default(0)
-  safetyScore   Float  @default(100)
+  id           String @id @default(cuid())
+  month        String
+  sequence     Int    @unique
+  lti          Int    @default(0)
+  nearMiss     Int    @default(0)
+  firstAid     Int    @default(0)
+  observations Int    @default(0)
+  toolboxTalks Int    @default(0)
+  manhours     Int    @default(0)
+  safetyScore  Float  @default(100)
 }
 
 // ---------------------------------------------------------

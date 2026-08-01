@@ -139,8 +139,10 @@ async function main() {
   /* ---------------------------------------------------------------- */
   /* Delivery                                                          */
   /* ---------------------------------------------------------------- */
+  // Phases first, then the dependency links, so every predecessor exists.
+  const phaseIdByMockId = new Map<string, string>();
   for (const p of phases) {
-    await prisma.projectPhase.create({
+    const created = await prisma.projectPhase.create({
       data: {
         projectId,
         sequence: p.sequence,
@@ -151,14 +153,29 @@ async function main() {
         actualFinish: optionalDate(p.actualFinish),
         status: p.status,
         progress: p.progress,
+        plannedProgress: p.plannedProgress,
         owner: p.owner,
         keyDeliverables: p.keyDeliverables,
         delayReason: p.delayReason,
         recoveryPlan: p.recoveryPlan,
       },
     });
+    phaseIdByMockId.set(p.id, created.id);
   }
-  console.log(`  ✓ ${phases.length} phases`);
+
+  let links = 0;
+  for (const p of phases) {
+    for (const dep of p.dependsOn) {
+      const successorId = phaseIdByMockId.get(p.id);
+      const predecessorId = phaseIdByMockId.get(dep.phaseId);
+      if (!successorId || !predecessorId) continue;
+      await prisma.phaseDependency.create({
+        data: { successorId, predecessorId, lagDays: dep.lagDays, note: dep.note },
+      });
+      links += 1;
+    }
+  }
+  console.log(`  ✓ ${phases.length} phases, ${links} schedule links`);
 
   await prisma.milestone.createMany({
     data: milestones.map((m) => ({
@@ -168,6 +185,7 @@ async function main() {
       description: m.description,
       plannedDate: date(m.plannedDate),
       actualDate: optionalDate(m.actualDate),
+      forecastDate: optionalDate(m.forecastDate),
       status: m.status,
       owner: m.owner,
       dependency: m.dependency,

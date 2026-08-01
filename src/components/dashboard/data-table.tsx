@@ -43,7 +43,8 @@ export type ColumnType =
   | "risk"
   | "number"
   | "list"
-  | "boolean";
+  | "boolean"
+  | "variance";
 
 export interface Column {
   key: string;
@@ -174,6 +175,26 @@ function Cell({
 
     case "number":
       return <span className="tabular-nums">{String(raw ?? "—")}</span>;
+
+    case "variance": {
+      // Schedule variance in days: positive is late, negative is early.
+      if (raw === null || raw === undefined) {
+        return <span className="text-muted-foreground">—</span>;
+      }
+      const days = Number(raw);
+      return (
+        <span
+          className={cn(
+            "whitespace-nowrap font-medium tabular-nums",
+            days > 0 && "text-destructive",
+            days < 0 && "text-success",
+            days === 0 && "text-muted-foreground",
+          )}
+        >
+          {days === 0 ? "On plan" : `${days > 0 ? "+" : ""}${days} d`}
+        </span>
+      );
+    }
 
     case "boolean":
       return <StatusBadge status={raw ? "Yes" : "No"} tone={raw ? "warning" : "neutral"} dot={false} />;
