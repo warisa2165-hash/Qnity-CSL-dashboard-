@@ -27,21 +27,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function ThemeToggle() {
   const { setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Change colour theme">
-          {mounted ? (
-            <>
-              <Sun className="h-4 w-4 dark:hidden" />
-              <Moon className="hidden h-4 w-4 dark:block" />
-            </>
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
+          {/*
+            No mounted guard is needed. Which icon shows is decided purely by
+            the `dark:` CSS classes against the class next-themes writes onto
+            <html> in a blocking script before hydration, so the server and
+            client markup are identical either way.
+          */}
+          <Sun className="h-4 w-4 dark:hidden" />
+          <Moon className="hidden h-4 w-4 dark:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

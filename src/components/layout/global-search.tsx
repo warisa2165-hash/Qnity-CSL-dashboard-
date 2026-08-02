@@ -15,6 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+const EMPTY_HITS: SearchHit[] = [];
+
 interface SearchHit {
   label: string;
   href: string;
@@ -50,10 +52,9 @@ export function GlobalSearch({
 
   React.useEffect(() => {
     const q = query.trim();
-    if (q.length < 2) {
-      setRecords([]);
-      return;
-    }
+    // Nothing to fetch for a short query. The results are *derived* as empty
+    // below rather than cleared here, so no state is set inside the effect.
+    if (q.length < 2) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
@@ -71,9 +72,19 @@ export function GlobalSearch({
     };
   }, [query]);
 
-  const all = [...pageHits, ...records];
+  // A short query shows no record results even if an earlier, longer query
+  // left some in state; typing back past two characters refetches.
+  const visibleRecords = query.trim().length < 2 ? EMPTY_HITS : records;
+  const all = [...pageHits, ...visibleRecords];
 
-  React.useEffect(() => setCursor(0), [query]);
+  // Reset the keyboard cursor when the query changes. Adjusted during render
+  // rather than in an effect, so the highlighted row never lands on a stale
+  // index for a frame.
+  const [cursorQuery, setCursorQuery] = React.useState(query);
+  if (query !== cursorQuery) {
+    setCursorQuery(query);
+    setCursor(0);
+  }
 
   function go(hit: SearchHit | undefined) {
     if (!hit) return;

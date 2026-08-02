@@ -91,8 +91,15 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
 
-  // Close the mobile drawer whenever the route changes.
-  React.useEffect(() => setMobileOpen(false), [pathname]);
+  // Close the mobile drawer whenever the route changes. Adjusted during
+  // render rather than in an effect: React re-runs this component
+  // immediately without committing the stale open drawer to the DOM, so the
+  // drawer never flashes on the new page.
+  const [drawerPath, setDrawerPath] = React.useState(pathname);
+  if (pathname !== drawerPath) {
+    setDrawerPath(pathname);
+    setMobileOpen(false);
+  }
 
   // Ctrl/Cmd+K opens search, matching the platform convention on every browser.
   React.useEffect(() => {

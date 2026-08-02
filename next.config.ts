@@ -3,10 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  eslint: {
-    // Lint is run explicitly in CI via `npm run lint`.
-    ignoreDuringBuilds: true,
-  },
+  // Next 16 removed the `eslint` config key — linting is no longer part of
+  // `next build`. It runs on its own through the ESLint CLI (`npm run lint`).
   async headers() {
     return [
       {

@@ -8,7 +8,7 @@
     "//build": "prisma generate runs first because Vercel restores a cached node_modules and skips the @prisma/client postinstall that would otherwise generate it. Generation needs no database connection, so this is safe in mock mode.",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
@@ -39,11 +39,11 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.469.0",
-    "next": "15.5.22",
-    "next-auth": "^5.0.0-beta.32",
+    "next": "16.2.12",
+    "next-auth": "5.0.0-beta.32",
     "next-themes": "^0.4.4",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "recharts": "^2.15.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
@@ -51,11 +51,11 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
-    "@types/react": "^19.0.7",
-    "@types/react-dom": "^19.0.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.18.0",
-    "eslint-config-next": "15.5.22",
+    "eslint-config-next": "16.2.12",
     "postcss": "^8.5.25",
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.17",
@@ -63,6 +63,10 @@
     "typescript": "^5.7.3"
   },
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=20.9.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.25",
+    "sharp": "^0.35.3"
   }
 }

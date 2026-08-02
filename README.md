@@ -62,7 +62,7 @@ role can be evaluated. The shared password is `DEMO_PASSWORD`
 
 | Layer | Choice |
 |---|---|
-| Framework | Next.js 15.5 (App Router, React 19, server components) |
+| Framework | Next.js 16 (App Router, React 19, server components) |
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS 3 with the QNITY corporate palette |
 | Components | shadcn/ui patterns on Radix primitives |
@@ -87,7 +87,7 @@ qnity-csl-dashboard/
 │   ├── DEPLOYMENT.md              Entra ID setup and hosting
 │   └── DATA-INTEGRATION.md        Excel / SharePoint / Power BI / manual input
 └── src/
-    ├── middleware.ts              Edge session gate
+    ├── proxy.ts                   Edge session gate (Next 16 file convention)
     ├── app/
     │   ├── layout.tsx             Root layout + theme provider
     │   ├── page.tsx               Permission-aware landing redirect
@@ -166,7 +166,7 @@ Every permission is a `page:action` string (`payments:approve`,
 
 Access is enforced in three places, so no single bypass exposes data:
 
-1. **Middleware** — unauthenticated requests never reach a portal route.
+1. **Edge proxy** — unauthenticated requests never reach a portal route.
 2. **Server components** — `requirePage()` re-checks entitlement on every
    render; the navigation is filtered from the same rules.
 3. **API routes** — every route re-derives permissions from the session; the

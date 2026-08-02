@@ -215,37 +215,53 @@ Current pins, chosen to clear that check:
 
 | Package | Pinned | Why |
 |---|---|---|
-| `next` | `15.5.22` | Latest release on the maintained 15.x security line (npm `backport` tag). Staying on 15.x avoids a major-version migration. |
+| `next` | `16.2.12` | Latest stable. The 15.x `backport` line still tripped Vercel's check, so the project moved to the current major. |
+| `react` / `react-dom` | `19.2.8` | Latest stable, required to stay on a supported pairing with Next 16. |
 | `next-auth` | `5.0.0-beta.32` | Clears four **critical** Auth.js advisories, the most relevant being *configuration errors can cause existence-based auth checks to fail open* — precisely the pattern `currentUser()` uses. |
+| `eslint-config-next` | `16.2.12` | Matches the framework. |
 | `postcss` | `^8.5.25` | Clears three advisories in the Tailwind build chain. |
 
-Both are pinned exactly rather than with a caret, so a deployment is
-reproducible from `package-lock.json` alone.
+Framework packages are pinned exactly, so a deployment is reproducible from
+`package-lock.json` alone. Next 16 requires **Node 20.9 or later**, which
+`engines.node` now states; Vercel reads it when selecting a runtime.
 
-### Two advisories remain, and cannot be fixed here
+### Overrides
 
-`npm audit` still reports two, both inside Next.js's own dependency tree:
+Two advisories used to survive inside Next.js's own dependency tree — its
+bundled `postcss@8.4.31`, and `sharp`, which backs `next/image`. Neither
+could be fixed by upgrading Next. `package.json` therefore carries:
 
-- **`postcss@8.4.31`** at `node_modules/next/node_modules/postcss` — Next
-  bundles its own copy and pins the version. Our Tailwind chain resolves to
-  the patched 8.5.25; this one is used only by Next's internal CSS pipeline
-  at build time.
-- **`sharp`** — an optional dependency Next uses for `next/image`
-  optimisation. **This application never uses `next/image`**, so the code
-  path is not reachable at runtime.
+```json
+"overrides": { "postcss": "^8.5.25", "sharp": "^0.35.3" }
+```
 
-Neither is resolvable without an upstream Next.js release. `npm audit fix
---force` "resolves" both by downgrading to `next@9.3.3`, which is a
-nine-major-version regression and must not be run.
+Both are forward-compatible patch upgrades within the same major, and the
+result is a clean `npm audit` (`found 0 vulnerabilities`). After changing
+either override, re-check that Tailwind still emits both theme token sets —
+`--primary` and `--background` should each appear twice in the built CSS,
+once for light and once for dark.
+
+Do **not** run `npm audit fix --force`. It "resolves" framework advisories by
+downgrading Next to 9.3.3.
 
 ### When you upgrade
 
-`next-auth` is on a beta line, so treat any bump as behaviour-affecting and
-re-run the step 5 checklist. After the beta.25 → beta.32 upgrade the full
-regression was re-run: unauthenticated gate, rejected bad password, all 17
-admin pages, per-role sidebar counts (contractor 10, consultant 11,
-leadership 16, admin 17), every denied route landing on `/no-access`, and
-session persistence across reload.
+`next-auth` is on a beta line, and Next majors move file conventions, so
+treat either bump as behaviour-affecting and re-run the step 5 checklist.
+
+The Next 15 → 16 upgrade required three source changes, all mechanical:
+
+- `src/middleware.ts` → `src/proxy.ts`, with the exported function renamed
+  from `middleware` to `proxy`. Next 16 renamed the file convention; the
+  logic is untouched.
+- The `eslint` key was removed from `next.config.ts` — Next 16 no longer
+  runs ESLint during `next build`.
+- `next lint` was replaced by the ESLint CLI with a flat config
+  (`eslint.config.mjs`). `eslint-config-next` 16 also promotes
+  `react-hooks/set-state-in-effect` to an error, which caught three real
+  `setState`-inside-`useEffect` patterns in the app shell, the global search
+  and the theme toggle. All three were rewritten to derive state or adjust
+  it during render rather than suppressed.
 
 ---
 
@@ -253,8 +269,9 @@ session persistence across reload.
 
 | Symptom | Cause and fix |
 |---|---|
-| Build banner says a vulnerable Next.js version was detected | Framework advisory. See section 9 — `next` is pinned to the latest maintained 15.x release. If a new advisory lands, check `npm view next dist-tags` for the current `backport` version. |
-| `npm audit` reports postcss and sharp | Expected. Both live inside Next.js's own tree; see section 9. Never run `npm audit fix --force` — it downgrades Next to 9.3.3. |
+| Build banner says a vulnerable Next.js version was detected | Framework advisory. See section 9 — `next` is pinned to the latest stable release. Check `npm view next dist-tags` for the current `latest`. |
+| `npm audit` reports postcss or sharp | The `overrides` block in `package.json` has been removed or defeated. See section 9. Never run `npm audit fix --force` — it downgrades Next to 9.3.3. |
+| Build fails on an unsupported Node version | Next 16 needs Node >= 20.9. Set it in Project → Settings → Node.js Version. |
 | Build fails on `@prisma/client did not initialize yet` | The build command lost its `prisma generate` prefix. Restore `"build": "prisma generate && next build"`. |
 | Every request redirects to `/login` in a loop | `AUTH_SECRET` is unset or differs between Production and Preview. Set it in both, then redeploy. |
 | `MissingSecret` in the function logs | Same cause — `AUTH_SECRET` never reached the runtime environment. |

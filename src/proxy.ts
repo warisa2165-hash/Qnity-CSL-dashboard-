@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Edge-level gate.
+ * Edge-level gate. Called `proxy` because Next 16 renamed the `middleware`
+ * file convention; the behaviour is unchanged.
  *
- * The middleware only checks whether a session cookie is present, which is
+ * The proxy only checks whether a session cookie is present, which is
  * cheap and avoids pulling the Node-only auth stack into the edge runtime.
  * The authoritative check — is this user active, and are they entitled to
  * this page? — happens in the server components via `lib/guard.ts`, so a
@@ -25,7 +26,7 @@ const SESSION_COOKIES = [
   "__Secure-next-auth.session-token",
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {

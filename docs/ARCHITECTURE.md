@@ -6,7 +6,7 @@ QNITY CSL Laboratory Renovation 2026 — Project Dashboard Portal.
 
 ## 1. Shape of the application
 
-Next.js 15 App Router, server components by default. A page is a server
+Next.js 16 App Router, server components by default. A page is a server
 component that:
 
 1. calls a guard (`requirePage("risks")`) to establish identity and
@@ -22,7 +22,7 @@ serializable props, never functions.
 ```
 Browser
   │
-  ├─ middleware.ts ............ session cookie present?  (edge)
+  ├─ proxy.ts ................. session cookie present?  (edge)
   │
   ├─ app/(portal)/layout.tsx .. requireUser() + build the permitted nav
   │
@@ -88,13 +88,13 @@ can construct any policy the project needs without inventing new roles.
 
 | Layer | File | Responsibility |
 |---|---|---|
-| Edge | `middleware.ts` | Is there a session cookie? Cheap, no Node stack on the edge. |
+| Edge | `proxy.ts` | Is there a session cookie? Cheap, no Node stack on the edge. Named `proxy` since Next 16 renamed the `middleware` convention. |
 | Layout | `app/(portal)/layout.tsx` | Authenticate, filter the navigation. |
 | Page | `lib/guard.ts` | `requirePage()` re-checks entitlement on every render. |
 | API | `lib/guard.ts` / route handlers | Re-derive permissions from the session. |
 | Record | Page code | Role-restricted documents are filtered before rendering. |
 
-The middleware intentionally does **not** carry the authorisation decision.
+The edge proxy intentionally does **not** carry the authorisation decision.
 It only avoids pointless work for anonymous requests; every authoritative
 check runs server-side where the full session is available.
 
