@@ -7,6 +7,7 @@ import { formatCurrency, humanize } from "@/lib/utils";
 import { PageHeader, SectionTitle } from "@/components/dashboard/page-header";
 import { KpiCard, CounterTile } from "@/components/dashboard/kpi-card";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
+import { StorageNotice } from "@/components/dashboard/storage-notice";
 import { FunnelChart, DonutChart } from "@/components/charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -30,6 +31,7 @@ const COLUMNS: Column[] = [
 
 export default async function ProcurementPage() {
   const { can } = await requirePage("procurement");
+  const editable = can("procurement:edit");
   const packages = await getProcurement();
   const stats = procurementStats(packages);
 
@@ -66,8 +68,10 @@ export default async function ProcurementPage() {
       <PageHeader
         title="Procurement Dashboard"
         description="Package progression from RFQ through purchase order, manufacturing and delivery to installation and commissioning."
-        readOnly={!can("procurement:edit")}
+        readOnly={!editable}
       />
+
+      <StorageNotice editable={editable} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
@@ -150,6 +154,12 @@ export default async function ProcurementPage() {
           ]}
           exportName="qnity-csl-procurement"
           defaultSort="targetDeliveryDate"
+          editing={{
+            entityKey: "procurement",
+            canEdit: editable,
+            canCreate: can("procurement:create"),
+            canDelete: can("procurement:delete"),
+          }}
         />
       </section>
     </>

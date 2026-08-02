@@ -54,6 +54,45 @@ Dates are ISO date strings (`2026-08-01`), money is a plain number, and enums
 are the same UPPER_SNAKE strings the Prisma schema uses. That is what makes
 `DATA_SOURCE` a one-line switch.
 
+### The JSON overlay
+
+Five collections — project, milestones, risks, actions, procurement — are
+editable without a database. Their getters go through `overlay()` instead:
+
+```ts
+export const getRisks = () => overlay("risks", "getRisks", mock.risks);
+```
+
+`overlay()` asks `data/store.ts` for a saved `data/<collection>.json` and
+returns it if present; otherwise it falls through to `resolve()` and the
+baseline. So the mock dataset is never mutated, and the switch happens one
+collection at a time. `store.ts` is imported dynamically because it touches
+`node:fs`, which must never be pulled into the edge bundle that `proxy.ts`
+compiles to.
+
+`store.ts` resolves its write location once per process: the repository's
+`data/` directory if that is writable, otherwise the OS temp directory with
+`durable: false`. Callers surface that flag rather than assuming a write
+succeeded — a read-only host (Vercel) accepts edits and loses them on
+recycle, and the UI has to be able to say so. Writes go to a sibling `.tmp`
+file and are renamed into place, so a crash mid-write cannot leave a
+half-written file that the next read would reject.
+
+### Editing: schema in one place
+
+`lib/records.ts` declares each editable entity — its collection, its page (the
+`<page>:edit` permission checked against it), and its fields as plain data.
+That single declaration drives the form (`components/dashboard/record-editor.tsx`),
+the coercion and validation, and what `lib/actions/records.ts` will accept:
+only declared keys, coerced to declared types. The field list being plain data
+is what lets a server component hand a whole form schema across the client
+boundary, the same way `Column[]` already works for tables.
+
+Derived fields are computed server-side and never taken from the form — a
+risk's `level` from likelihood × impact, an action's `lastUpdated` from the
+edit itself — because a hand-entered value there would let the register
+contradict itself.
+
 ### Adding a field
 
 1. Add it to the interface in `lib/types.ts`.
@@ -61,6 +100,8 @@ are the same UPPER_SNAKE strings the Prisma schema uses. That is what makes
 3. Add the column to `prisma/schema.prisma` and map it in
    `prisma-repository.ts`.
 4. Add it to the page's `Column[]` config.
+5. If the register is editable, add a `FieldDef` to `lib/records.ts` — that
+   alone puts it in the form, the validation and the saved record.
 
 ---
 

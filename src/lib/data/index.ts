@@ -45,6 +45,36 @@ export function dataSource(): DataSource {
 }
 
 /**
+ * In mock mode the five editable collections are overlaid with whatever the
+ * JSON file store holds, so an administrator's saved changes are what every
+ * page reads. The import is dynamic because `store.ts` touches `node:fs`,
+ * which must never be pulled into an edge bundle.
+ */
+async function fromStore<T>(
+  collection: import("./store").Collection,
+): Promise<T | null> {
+  if (dataSource() !== "mock") return null;
+  try {
+    const { readCollection } = await import("./store");
+    return await readCollection<T>(collection);
+  } catch (error) {
+    console.error(`[data] store unavailable for ${collection}`, error);
+    return null;
+  }
+}
+
+/** Baseline first, then any saved override. */
+async function overlay<T>(
+  collection: import("./store").Collection,
+  key: keyof PrismaRepository,
+  baseline: T,
+): Promise<T> {
+  const saved = await fromStore<T>(collection);
+  if (saved !== null) return saved;
+  return resolve(key, baseline);
+}
+
+/**
  * When DATA_SOURCE=prisma the repository loads `./prisma-repository`, which
  * maps the Prisma models onto exactly the same shapes returned here. The
  * import is dynamic so a mock-mode deployment never needs a DATABASE_URL.
@@ -100,20 +130,21 @@ async function resolve<T>(
 /* Public repository                                                   */
 /* ------------------------------------------------------------------ */
 
-export const getProject = () => resolve("getProject", mock.project);
+export const getProject = () => overlay("project", "getProject", mock.project);
 export const getPhases = () => resolve("getPhases", mock.phases);
-export const getMilestones = () => resolve("getMilestones", mock.milestones);
+export const getMilestones = () =>
+  overlay("milestones", "getMilestones", mock.milestones);
 export const getDesignPackages = () =>
   resolve("getDesignPackages", mock.designPackages);
 export const getSubmissions = () => resolve("getSubmissions", mock.submissions);
 export const getProcurement = () =>
-  resolve("getProcurement", mock.procurementPackages);
+  overlay("procurement", "getProcurement", mock.procurementPackages);
 export const getCapex = () => resolve("getCapex", mock.capexEquipment);
 export const getPayments = () => resolve("getPayments", mock.paymentMilestones);
-export const getRisks = () => resolve("getRisks", mock.risks);
+export const getRisks = () => overlay("risks", "getRisks", mock.risks);
 export const getSafetyReports = () =>
   resolve("getSafetyReports", mock.safetyReports);
-export const getActions = () => resolve("getActions", mock.actionItems);
+export const getActions = () => overlay("actions", "getActions", mock.actionItems);
 export const getAttentionItems = () =>
   resolve("getAttentionItems", mock.attentionItems);
 export const getGallery = () => resolve("getGallery", mock.galleryPhotos);

@@ -7,6 +7,7 @@ import { PageHeader, SectionTitle } from "@/components/dashboard/page-header";
 import { KpiCard, CounterTile } from "@/components/dashboard/kpi-card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
+import { StorageNotice } from "@/components/dashboard/storage-notice";
 import { GroupedBarChart, StackedBarChart } from "@/components/charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -28,6 +29,7 @@ const COLUMNS: Column[] = [
 
 export default async function ActionsPage() {
   const { can } = await requirePage("actions");
+  const editable = can("actions:edit");
   const actions = await getActions();
   const stats = actionStats(actions);
 
@@ -60,8 +62,10 @@ export default async function ActionsPage() {
       <PageHeader
         title="Action Tracker"
         description="Every action arising from project meetings, e-mail follow-ups and site reviews, with owner, company and due date."
-        readOnly={!can("actions:edit")}
+        readOnly={!editable}
       />
+
+      <StorageNotice editable={editable} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Total open actions" value={stats.open} tone="info" />
@@ -185,6 +189,12 @@ export default async function ActionsPage() {
           ]}
           exportName="qnity-csl-actions"
           defaultSort="dueDate"
+          editing={{
+            entityKey: "actions",
+            canEdit: editable,
+            canCreate: can("actions:create"),
+            canDelete: can("actions:delete"),
+          }}
         />
       </section>
     </>

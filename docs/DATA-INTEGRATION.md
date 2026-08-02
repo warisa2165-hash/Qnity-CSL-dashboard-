@@ -20,11 +20,33 @@ export const getRisks = () => resolve("getRisks", mock.risks);
 
 | Value | Behaviour |
 |---|---|
-| `mock` (default) | Serves the built-in QNITY 2026 dataset. No database required. |
+| `mock` (default) | Serves the built-in QNITY 2026 dataset, overlaid with any edits saved to `data/*.json`. No database required. |
 | `prisma` | Reads PostgreSQL through `prisma-repository.ts`. |
 
 Both paths return identical shapes (`src/lib/types.ts`), so switching the
 source changes nothing in the UI.
+
+### The JSON overlay (mock mode)
+
+Five collections are editable in the portal without a database: the project
+record, milestones, risks, actions and procurement packages. When one is
+saved, the whole collection is written to `data/<collection>.json` and
+`overlay()` serves that file from then on:
+
+```ts
+// src/lib/data/index.ts
+export const getRisks = () => overlay("risks", "getRisks", mock.risks);
+```
+
+The mock dataset is never modified — it stays the baseline for every
+collection that has not been edited, and **Reset** in *Admin Panel → Data
+management* deletes the JSON file to return to it. See `data/README.md`.
+
+This is deliberately a stepping stone, not the destination: JSON files have no
+concurrency control and no row-level history, so two administrators editing
+the same register at the same time will have the last write win. It is the
+right shape for UAT and for a single-administrator deployment; move to
+`DATA_SOURCE=prisma` before the portal carries the project of record.
 
 **The contract:** dates are ISO date strings (`"2026-08-01"`), money is a
 plain number, enums are UPPER_SNAKE strings matching the Prisma schema, and
@@ -156,10 +178,36 @@ writes flowing through the portal so the audit trail stays complete.
 
 ### D. Manual admin input
 
-With `DATA_SOURCE=prisma`, records can be maintained in the portal itself.
-The API routes under `src/app/api/` already carry the pattern: permission
-check → Zod validation → Prisma write → `recordAudit()`. Extend it per
-register:
+Records can be maintained in the portal itself. In mock mode the edit forms
+write to `data/*.json`; the entities, fields and validation rules are declared
+in one place, `src/lib/records.ts`:
+
+```ts
+milestones: {
+  collection: "milestones",
+  page: "milestones",          // drives the "<page>:edit" permission check
+  label: "milestone",
+  titleKey: "name",
+  codeKey: "code",
+  fields: [
+    { key: "code", label: "Milestone ID", type: "text", required: true },
+    { key: "plannedDate", label: "Planned date", type: "date", required: true },
+    { key: "status", label: "Status", type: "select", options: MILESTONE_STATUS, required: true },
+    // …
+  ],
+},
+```
+
+Adding a field to that array puts it in the form, in the validation and in the
+saved record — no component changes. The schema is also the security boundary:
+`saveRecord()` accepts only the keys declared here, coerced to their declared
+types, so a crafted request cannot introduce fields the form never offered.
+Permissions are re-derived from the session on every call, never taken from the
+client.
+
+To write those same edits to PostgreSQL instead, set `DATA_SOURCE=prisma`. The
+API routes under `src/app/api/` carry the pattern: permission check → Zod
+validation → Prisma write → `recordAudit()`. Extend it per register:
 
 ```ts
 export async function PATCH(request: Request, { params }) {

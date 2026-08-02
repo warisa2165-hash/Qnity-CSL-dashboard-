@@ -7,6 +7,7 @@ import { PageHeader, SectionTitle } from "@/components/dashboard/page-header";
 import { KpiCard, CounterTile } from "@/components/dashboard/kpi-card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
+import { StorageNotice } from "@/components/dashboard/storage-notice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata = { title: "Milestone Dashboard" };
@@ -28,6 +29,7 @@ export default async function MilestonesPage() {
   const { can } = await requirePage("milestones");
   const milestones = await getMilestones();
   const stats = milestoneStats(milestones);
+  const editable = can("milestones:edit");
 
   const completedOnTime = milestones.filter(
     (m) =>
@@ -45,8 +47,10 @@ export default async function MilestonesPage() {
       <PageHeader
         title="Milestone Dashboard"
         description="Every contractual and delivery milestone from project kick-off to final handover on 06 December 2026."
-        readOnly={!can("milestones:edit")}
+        readOnly={!editable}
       />
+
+      <StorageNotice editable={editable} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
@@ -140,6 +144,12 @@ export default async function MilestonesPage() {
           ]}
           exportName="qnity-csl-milestones"
           defaultSort="plannedDate"
+          editing={{
+            entityKey: "milestones",
+            canEdit: editable,
+            canCreate: can("milestones:create"),
+            canDelete: can("milestones:delete"),
+          }}
         />
       </section>
     </>

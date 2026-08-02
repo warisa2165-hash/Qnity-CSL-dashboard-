@@ -174,8 +174,17 @@ All of them use the single `DEMO_PASSWORD` you set.
 
 Not defects — consequences of running mock-only on a read-only filesystem:
 
-- **Nothing persists.** Admin actions (invite, disable, change role, approve
-  an access request) are validated, permission-checked and written to the
+- **Edits do not survive a cold start.** The five editable registers
+  (Project Information, Milestones, Risks, Actions, Procurement) save
+  normally and the new values appear immediately, but Vercel's application
+  directory is read-only, so the JSON store falls back to `/tmp`. That
+  survives a page refresh and stays for the life of the instance; it is wiped
+  when the instance recycles. The edit pages and the Admin Panel state this
+  on screen rather than losing work quietly. To keep changes permanently,
+  run the portal where `data/` is writable, or connect PostgreSQL and set
+  `DATA_SOURCE=prisma`.
+- **Other admin actions do not persist.** Invite, disable, change role and
+  approve-access-request are validated, permission-checked and written to the
   audit trail, then discarded. The UI says so on screen.
 - **File upload and document download are disabled.** Vercel's filesystem is
   read-only and the mock records carry no files. The buttons render disabled

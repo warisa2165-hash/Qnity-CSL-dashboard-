@@ -147,7 +147,11 @@ export function DataManagement({ source }: { source: "mock" | "prisma" }) {
             </li>
             <li>
               <strong className="text-foreground">Manual admin input</strong> —
-              edit records directly in the portal once a database is connected.
+              edit the project record, milestones, risks, actions and
+              procurement packages directly in the portal. Without a database
+              those edits are written to JSON files in{" "}
+              <code className="font-mono text-xs">data/</code>; with one
+              connected they go to PostgreSQL.
             </li>
           </ul>
           <p>

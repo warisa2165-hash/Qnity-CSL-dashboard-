@@ -10,6 +10,7 @@ import { KpiCard, CounterTile } from "@/components/dashboard/kpi-card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { RiskHeatmap } from "@/components/dashboard/risk-heatmap";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
+import { StorageNotice } from "@/components/dashboard/storage-notice";
 import { GroupedBarChart } from "@/components/charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -32,6 +33,7 @@ const COLUMNS: Column[] = [
 
 export default async function RisksPage() {
   const { can } = await requirePage("risks");
+  const editable = can("risks:edit");
   const risks = await getRisks();
   const stats = riskStats(risks);
 
@@ -51,8 +53,10 @@ export default async function RisksPage() {
       <PageHeader
         title="Risk Management Dashboard"
         description="Project risk register with a 5 × 5 likelihood and impact heat map, mitigation ownership and leadership escalation flags."
-        readOnly={!can("risks:edit")}
+        readOnly={!editable}
       />
+
+      <StorageNotice editable={editable} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
@@ -238,6 +242,12 @@ export default async function RisksPage() {
           ]}
           exportName="qnity-csl-risk-register"
           defaultSort="dueDate"
+          editing={{
+            entityKey: "risks",
+            canEdit: editable,
+            canCreate: can("risks:create"),
+            canDelete: can("risks:delete"),
+          }}
         />
       </section>
     </>

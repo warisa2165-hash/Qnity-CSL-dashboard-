@@ -185,7 +185,28 @@ DATA_SOURCE=mock      (default)  → the built-in QNITY 2026 dataset, no databas
 DATA_SOURCE=prisma               → PostgreSQL through Prisma
 ```
 
-To move to real data:
+### Editing without a database
+
+Five registers can be edited in the portal on the default mock setting:
+**Project Information, Milestones, Risks, Actions and Procurement**. A user
+with `<page>:edit` sees a pencil on each row and an *Edit* button on the
+project record; `<page>:create` adds a *New …* button; `<page>:delete` adds a
+delete control inside the form.
+
+Saving writes the whole collection to `data/<collection>.json`, and every page
+reads that file from then on — through a refresh, a restart and a redeploy of
+the same commit. The built-in dataset is untouched and stays the baseline for
+anything not yet edited; *Admin Panel → Data management → Saved edits* shows
+which collections have been changed and can reset any of them. The files are
+plain JSON, meant to be committed: see [`data/README.md`](data/README.md).
+
+> **On Vercel and other read-only hosts** the application directory cannot be
+> written, so the store falls back to a temporary directory. Edits save and
+> display normally but are lost when the instance recycles — the edit pages
+> and the Admin Panel say so explicitly rather than losing work quietly. For
+> permanent storage, run where `data/` is writable or connect PostgreSQL.
+
+### Moving to real data
 
 ```bash
 # 1. Point at a PostgreSQL instance
@@ -199,8 +220,10 @@ npm run seed
 DATA_SOURCE=prisma
 ```
 
-No page component changes. `docs/DATA-INTEGRATION.md` covers loading from
-Excel/CSV, SharePoint document libraries, Power BI and manual admin input.
+No page component changes, and any edits already saved under `data/` remain
+as a readable record of what was changed. `docs/DATA-INTEGRATION.md` covers
+loading from Excel/CSV, SharePoint document libraries, Power BI and manual
+admin input.
 
 ---
 
@@ -280,6 +303,7 @@ Traffic-light language is consistent across every page:
 - [`docs/DEPLOY-VERCEL.md`](docs/DEPLOY-VERCEL.md) — UAT deployment to Vercel on mock data, demo login enabled
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Entra ID registration, database and hosting
 - [`docs/DATA-INTEGRATION.md`](docs/DATA-INTEGRATION.md) — connecting Excel, SharePoint, Power BI and manual input
+- [`data/README.md`](data/README.md) — the JSON store behind the admin edit forms
 
 ---
 

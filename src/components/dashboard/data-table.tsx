@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { EmptyState } from "@/components/dashboard/page-header";
+import { RecordEditor } from "@/components/dashboard/record-editor";
 import {
   cn,
   formatCurrency,
@@ -82,6 +83,20 @@ interface DataTableProps<T extends object> {
   defaultSortDirection?: "asc" | "desc";
   /** Extra toolbar content (e.g. an "Add record" button). */
   toolbar?: React.ReactNode;
+  /**
+   * Turns the table into an editable register. The config is plain data, so a
+   * server component can enable editing without passing a render callback
+   * across the client boundary; the table itself mounts the record editor.
+   */
+  editing?: EditingConfig;
+}
+
+export interface EditingConfig {
+  /** Key into ENTITIES in `lib/records.ts`. */
+  entityKey: string;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 /** Narrowing helper: domain records are plain objects, not index types. */
@@ -239,6 +254,7 @@ export function DataTable<T extends object>({
   defaultSort,
   defaultSortDirection = "asc",
   toolbar,
+  editing,
 }: DataTableProps<T>) {
   const [query, setQuery] = React.useState("");
   const [active, setActive] = React.useState<Record<string, string>>({});
@@ -320,7 +336,11 @@ export function DataTable<T extends object>({
 
   return (
     <div className="space-y-3">
-      {(searchKeys.length > 0 || filters.length > 0 || exportName || toolbar) && (
+      {(searchKeys.length > 0 ||
+        filters.length > 0 ||
+        exportName ||
+        toolbar ||
+        editing?.canCreate) && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           {searchKeys.length > 0 && (
             <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
@@ -370,6 +390,9 @@ export function DataTable<T extends object>({
 
           <div className="ml-auto flex items-center gap-2">
             {toolbar}
+            {editing?.canCreate && (
+              <RecordEditor entityKey={editing.entityKey} trigger="button" />
+            )}
             {exportName && (
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4" />
@@ -421,6 +444,11 @@ export function DataTable<T extends object>({
                     )}
                   </TableHead>
                 ))}
+                {editing?.canEdit && (
+                  <TableHead className="w-12 text-right print:hidden">
+                    <span className="sr-only">Edit</span>
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -438,6 +466,16 @@ export function DataTable<T extends object>({
                       <Cell row={asRecord(row)} column={c} currency={currency} />
                     </TableCell>
                   ))}
+                  {editing?.canEdit && (
+                    <TableCell className="w-12 text-right print:hidden">
+                      <RecordEditor
+                        entityKey={editing.entityKey}
+                        record={asRecord(row)}
+                        canDelete={editing.canDelete}
+                        trigger="icon"
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

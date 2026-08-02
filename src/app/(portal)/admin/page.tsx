@@ -22,6 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserManagement } from "./user-management";
 import { AccessRequestQueue } from "./access-requests";
 import { DataManagement } from "./data-management";
+import { SavedEdits } from "./saved-edits";
+import { customisedCollections, storageStatus } from "@/lib/actions/records";
 
 export const metadata = { title: "Admin Panel" };
 
@@ -37,10 +39,12 @@ const AUDIT_COLUMNS: Column[] = [
 
 export default async function AdminPage() {
   const { user } = await requireAdmin();
-  const [users, requests, logs] = await Promise.all([
+  const [users, requests, logs, storage, customised] = await Promise.all([
     getUsers(),
     getAccessRequests(),
     getAuditLogs(),
+    storageStatus(),
+    customisedCollections(),
   ]);
 
   const pending = requests.filter((r) => r.status === "PENDING");
@@ -194,7 +198,8 @@ export default async function AdminPage() {
         </TabsContent>
 
         {/* -------------------- Data management --------------------- */}
-        <TabsContent value="data">
+        <TabsContent value="data" className="space-y-4">
+          <SavedEdits storage={storage} customised={customised} />
           <DataManagement source={dataSource()} />
         </TabsContent>
 

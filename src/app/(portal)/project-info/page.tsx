@@ -1,4 +1,4 @@
-import { Building2, CalendarCheck, Pencil, Target, Users } from "lucide-react";
+import { Building2, CalendarCheck, Target, Users } from "lucide-react";
 
 import { requirePage } from "@/lib/guard";
 import { getProject } from "@/lib/data";
@@ -7,8 +7,9 @@ import { HEALTH_LABEL, healthTone } from "@/lib/status";
 
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { RecordEditor } from "@/components/dashboard/record-editor";
+import { StorageNotice } from "@/components/dashboard/storage-notice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata = { title: "Project Information" };
@@ -47,22 +48,16 @@ export default async function ProjectInfoPage() {
         readOnly={!editable}
         actions={
           editable && (
-            <Button variant="outline" size="sm" disabled>
-              <Pencil className="h-4 w-4" />
-              Edit project details
-            </Button>
+            <RecordEditor
+              entityKey="project"
+              record={project as unknown as Record<string, unknown>}
+              label="Edit project details"
+            />
           )
         }
       />
 
-      {editable && (
-        <p className="rounded-md border border-primary/25 bg-accent px-3 py-2 text-sm text-accent-foreground">
-          You have administrator edit rights on this page. In the mock-data
-          build these fields are read-only; connect a database
-          (<code className="font-mono text-xs">DATA_SOURCE=prisma</code>) to
-          enable inline editing and the change audit trail.
-        </p>
-      )}
+      <StorageNotice editable={editable} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
