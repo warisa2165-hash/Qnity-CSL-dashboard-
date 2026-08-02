@@ -36,6 +36,16 @@ export function entraConfigured(): boolean {
   );
 }
 
+/**
+ * Auth.js refuses to issue or read a session without a signing secret, and
+ * surfaces it only as the opaque `Configuration` error. Checking for it up
+ * front lets the login page say what is actually wrong — the person hitting
+ * this is almost always the one who owns the deployment settings.
+ */
+export function secretConfigured(): boolean {
+  return Boolean(process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET);
+}
+
 /** Look a portal user up by e-mail address. */
 export async function findUserByEmail(email: string): Promise<User | null> {
   const all = await getUsers();

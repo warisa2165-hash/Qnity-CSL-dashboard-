@@ -273,8 +273,8 @@ The Next 15 → 16 upgrade required three source changes, all mechanical:
 | `npm audit` reports postcss or sharp | The `overrides` block in `package.json` has been removed or defeated. See section 9. Never run `npm audit fix --force` — it downgrades Next to 9.3.3. |
 | Build fails on an unsupported Node version | Next 16 needs Node >= 20.9. Set it in Project → Settings → Node.js Version. |
 | Build fails on `@prisma/client did not initialize yet` | The build command lost its `prisma generate` prefix. Restore `"build": "prisma generate && next build"`. |
+| `/login?error=Configuration`, or "Authentication is not configured correctly" | `AUTH_SECRET` never reached the runtime. Auth.js reports every config fault as the same opaque `Configuration` error, and an unset secret is by far the most common cause — the function log will show `MissingSecret`. The login page now detects this and prints the fix directly. Add `AUTH_SECRET` for **both** Production and Preview, then **redeploy** — an environment change alone does not rebuild. |
 | Every request redirects to `/login` in a loop | `AUTH_SECRET` is unset or differs between Production and Preview. Set it in both, then redeploy. |
-| `MissingSecret` in the function logs | Same cause — `AUTH_SECRET` never reached the runtime environment. |
 | Demo sign-in rejects a valid account | `DEMO_PASSWORD` was changed but the site was not redeployed. Environment changes need a redeploy. |
 | The login page offers no demo accounts | `ENABLE_DEMO_LOGIN` is `false`, or was set only for Production while you are on a preview URL. |
 | Deployed but the dashboard is empty | `DATA_SOURCE` is misspelled. It must be exactly `mock`. |

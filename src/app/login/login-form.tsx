@@ -35,12 +35,14 @@ export function LoginForm({
   callbackUrl,
   entraEnabled,
   demoEnabled,
+  secretMissing,
   demoAccounts,
 }: {
   error?: string;
   callbackUrl: string;
   entraEnabled: boolean;
   demoEnabled: boolean;
+  secretMissing: boolean;
   demoAccounts: DemoAccount[];
 }) {
   const router = useRouter();
@@ -89,7 +91,50 @@ export function LoginForm({
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {message && (
+          {/*
+            `Configuration` is Auth.js's catch-all. The overwhelmingly common
+            cause is an unset AUTH_SECRET, and whoever sees this on a fresh
+            deployment is the person who can fix it — so name the variable
+            instead of telling them to contact themselves. Only shown while
+            demo login is on, i.e. never on a production deployment.
+          */}
+          {secretMissing && demoEnabled && (
+            <div
+              role="alert"
+              className="space-y-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm"
+            >
+              <p className="flex items-center gap-2 font-semibold text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                AUTH_SECRET is not set
+              </p>
+              <p className="text-muted-foreground">
+                Sign-in cannot work until this deployment has a session
+                signing key. Nothing else is wrong with the build.
+              </p>
+              <ol className="ml-4 list-decimal space-y-1 text-muted-foreground">
+                <li>
+                  Generate one:{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                    openssl rand -base64 32
+                  </code>
+                </li>
+                <li>
+                  Add it as{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                    AUTH_SECRET
+                  </code>{" "}
+                  in your host&rsquo;s environment variables, for{" "}
+                  <strong>both</strong> Production and Preview.
+                </li>
+                <li>
+                  Redeploy — environment changes do not apply to an existing
+                  build.
+                </li>
+              </ol>
+            </div>
+          )}
+
+          {message && !secretMissing && (
             <div
               role="alert"
               className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"

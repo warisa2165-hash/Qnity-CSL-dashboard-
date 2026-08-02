@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 
-import { currentUser, demoLoginEnabled, entraConfigured } from "@/lib/auth";
+import {
+  currentUser,
+  demoLoginEnabled,
+  entraConfigured,
+  secretConfigured,
+} from "@/lib/auth";
 import { getUsers } from "@/lib/data";
 import { ROLE_LABELS } from "@/lib/rbac";
 import { LoginForm } from "./login-form";
@@ -13,7 +18,10 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; callbackUrl?: string }>;
 }) {
   const params = await searchParams;
-  const user = await currentUser();
+  // A missing secret makes `auth()` throw, so the signed-in check has to be
+  // skipped rather than allowed to crash the page that explains the problem.
+  const hasSecret = secretConfigured();
+  const user = hasSecret ? await currentUser() : null;
   if (user) redirect(params.callbackUrl ?? "/");
 
   const users = await getUsers();
@@ -81,6 +89,7 @@ export default async function LoginPage({
           callbackUrl={params.callbackUrl ?? "/"}
           entraEnabled={entraConfigured()}
           demoEnabled={demoLoginEnabled()}
+          secretMissing={!hasSecret}
           demoAccounts={demoAccounts}
         />
       </div>
