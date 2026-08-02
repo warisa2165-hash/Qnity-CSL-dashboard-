@@ -82,6 +82,7 @@ qnity-csl-dashboard/
 │   └── seed.ts                    Seeds PostgreSQL from the QNITY baseline
 ├── vercel.json                    Vercel framework + region pin
 ├── docs/
+│   ├── USER-GUIDE-TH.md           คู่มือการใช้งาน (Thai user guide)
 │   ├── ARCHITECTURE.md            Structure, data flow, RBAC design
 │   ├── DEPLOY-VERCEL.md           UAT deployment on mock data
 │   ├── DEPLOYMENT.md              Entra ID setup and hosting
@@ -274,6 +275,7 @@ Traffic-light language is consistent across every page:
 
 ## Documentation
 
+- [`docs/USER-GUIDE-TH.md`](docs/USER-GUIDE-TH.md) — คู่มือการใช้งาน (Thai user guide for admin, user and visitor)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — structure, data flow and RBAC design
 - [`docs/DEPLOY-VERCEL.md`](docs/DEPLOY-VERCEL.md) — UAT deployment to Vercel on mock data, demo login enabled
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Entra ID registration, database and hosting
