@@ -62,13 +62,13 @@ role can be evaluated. The shared password is `DEMO_PASSWORD`
 
 | Layer | Choice |
 |---|---|
-| Framework | Next.js 15 (App Router, React 19, server components) |
+| Framework | Next.js 15.5 (App Router, React 19, server components) |
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS 3 with the QNITY corporate palette |
 | Components | shadcn/ui patterns on Radix primitives |
 | Charts | Recharts |
 | ORM / database | Prisma + PostgreSQL |
-| Authentication | Auth.js (NextAuth v5) with Microsoft Entra ID |
+| Authentication | Auth.js (NextAuth v5 beta) with Microsoft Entra ID |
 | Access control | Role-based, with per-user page and action overrides |
 
 ---

@@ -205,10 +205,56 @@ the Entra ID app registration walkthrough and the pre-launch checklist.
 
 ---
 
-## 9. Troubleshooting
+## 9. Dependency security
+
+Vercel runs a security check at the end of every build and will fail the
+deployment banner with *"Vulnerable version of Next.js detected, please
+update immediately"* if the framework has a published advisory.
+
+Current pins, chosen to clear that check:
+
+| Package | Pinned | Why |
+|---|---|---|
+| `next` | `15.5.22` | Latest release on the maintained 15.x security line (npm `backport` tag). Staying on 15.x avoids a major-version migration. |
+| `next-auth` | `5.0.0-beta.32` | Clears four **critical** Auth.js advisories, the most relevant being *configuration errors can cause existence-based auth checks to fail open* — precisely the pattern `currentUser()` uses. |
+| `postcss` | `^8.5.25` | Clears three advisories in the Tailwind build chain. |
+
+Both are pinned exactly rather than with a caret, so a deployment is
+reproducible from `package-lock.json` alone.
+
+### Two advisories remain, and cannot be fixed here
+
+`npm audit` still reports two, both inside Next.js's own dependency tree:
+
+- **`postcss@8.4.31`** at `node_modules/next/node_modules/postcss` — Next
+  bundles its own copy and pins the version. Our Tailwind chain resolves to
+  the patched 8.5.25; this one is used only by Next's internal CSS pipeline
+  at build time.
+- **`sharp`** — an optional dependency Next uses for `next/image`
+  optimisation. **This application never uses `next/image`**, so the code
+  path is not reachable at runtime.
+
+Neither is resolvable without an upstream Next.js release. `npm audit fix
+--force` "resolves" both by downgrading to `next@9.3.3`, which is a
+nine-major-version regression and must not be run.
+
+### When you upgrade
+
+`next-auth` is on a beta line, so treat any bump as behaviour-affecting and
+re-run the step 5 checklist. After the beta.25 → beta.32 upgrade the full
+regression was re-run: unauthenticated gate, rejected bad password, all 17
+admin pages, per-role sidebar counts (contractor 10, consultant 11,
+leadership 16, admin 17), every denied route landing on `/no-access`, and
+session persistence across reload.
+
+---
+
+## 10. Troubleshooting
 
 | Symptom | Cause and fix |
 |---|---|
+| Build banner says a vulnerable Next.js version was detected | Framework advisory. See section 9 — `next` is pinned to the latest maintained 15.x release. If a new advisory lands, check `npm view next dist-tags` for the current `backport` version. |
+| `npm audit` reports postcss and sharp | Expected. Both live inside Next.js's own tree; see section 9. Never run `npm audit fix --force` — it downgrades Next to 9.3.3. |
 | Build fails on `@prisma/client did not initialize yet` | The build command lost its `prisma generate` prefix. Restore `"build": "prisma generate && next build"`. |
 | Every request redirects to `/login` in a loop | `AUTH_SECRET` is unset or differs between Production and Preview. Set it in both, then redeploy. |
 | `MissingSecret` in the function logs | Same cause — `AUTH_SECRET` never reached the runtime environment. |
