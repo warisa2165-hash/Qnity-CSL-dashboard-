@@ -33,6 +33,10 @@ Generate a secret with `openssl rand -base64 32` and paste it into
 `AUTH_SECRET`. Nothing else is required — the portal ships with a complete
 QNITY mock dataset and needs **no database** to run.
 
+To put the same mock-data build on a public URL for stakeholder review, see
+[`docs/DEPLOY-VERCEL.md`](docs/DEPLOY-VERCEL.md) — seven environment
+variables, no database, demo sign-in left on for UAT.
+
 ### Signing in to the first version
 
 With `ENABLE_DEMO_LOGIN=true` the login page offers a role switcher so every
@@ -76,8 +80,10 @@ qnity-csl-dashboard/
 ├── prisma/
 │   ├── schema.prisma              Database schema (20+ models)
 │   └── seed.ts                    Seeds PostgreSQL from the QNITY baseline
+├── vercel.json                    Vercel framework + region pin
 ├── docs/
 │   ├── ARCHITECTURE.md            Structure, data flow, RBAC design
+│   ├── DEPLOY-VERCEL.md           UAT deployment on mock data
 │   ├── DEPLOYMENT.md              Entra ID setup and hosting
 │   └── DATA-INTEGRATION.md        Excel / SharePoint / Power BI / manual input
 └── src/
@@ -202,7 +208,7 @@ Excel/CSV, SharePoint document libraries, Power BI and manual admin input.
 | Script | Purpose |
 |---|---|
 | `npm run dev` | Development server |
-| `npm run build` | Production build |
+| `npm run build` | `prisma generate` then the production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript, no emit |
@@ -269,6 +275,7 @@ Traffic-light language is consistent across every page:
 ## Documentation
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — structure, data flow and RBAC design
+- [`docs/DEPLOY-VERCEL.md`](docs/DEPLOY-VERCEL.md) — UAT deployment to Vercel on mock data, demo login enabled
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Entra ID registration, database and hosting
 - [`docs/DATA-INTEGRATION.md`](docs/DATA-INTEGRATION.md) — connecting Excel, SharePoint, Power BI and manual input
 
