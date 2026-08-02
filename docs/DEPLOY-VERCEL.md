@@ -95,18 +95,36 @@ vercel --prod
 
 ## 4. Environment variables
 
-Copy from [`.env.vercel.example`](../.env.vercel.example). Seven variables,
-five of them fixed:
+Copy from [`.env.vercel.example`](../.env.vercel.example).
 
-| Variable | Value |
+### Exactly one variable is required
+
+| Variable | Value | If unset |
+|---|---|---|
+| `AUTH_SECRET` | **generate** — `openssl rand -base64 32` | **Sign-in cannot work.** Auth.js raises `MissingSecret` and every attempt returns `/login?error=Configuration`. |
+
+Demo login needs nothing else. Every other setting has a working default
+baked into the code, so a deployment carrying only `AUTH_SECRET` will sign
+in as any of the ten demo accounts using the built-in password.
+
+### Strongly recommended
+
+| Variable | Value | Default if unset | Why set it |
+|---|---|---|---|
+| `DEMO_PASSWORD` | **choose** — `openssl rand -base64 18` | `qnity2026` | The default is published in this repository. On a public URL, change it. |
+| `ENABLE_DEMO_LOGIN` | `true` | enabled | Only the exact string `false` disables it, but stating it makes the intent explicit and is what you flip for production. |
+| `DATA_SOURCE` | `mock` | `mock` | Explicit is better than implicit when a database is added later. |
+
+### Optional
+
+| Variable | Default if unset |
 |---|---|
-| `DATA_SOURCE` | `mock` |
-| `AUTH_SECRET` | **generate** — `openssl rand -base64 32` |
-| `AUTH_TRUST_HOST` | `true` |
-| `ENABLE_DEMO_LOGIN` | `true` |
-| `DEMO_PASSWORD` | **choose** — `openssl rand -base64 18` |
-| `PRIMARY_ADMIN_EMAIL` | `warisa.kantifong@qnity.com` |
-| `INTERNAL_EMAIL_DOMAINS` | `qnity.com` |
+| `PRIMARY_ADMIN_EMAIL` | `warisa.kantifong@qnity.com` — already correct for this project |
+| `INTERNAL_EMAIL_DOMAINS` | `qnity.com` — already correct |
+
+`AUTH_TRUST_HOST` is **not read by this application**. `trustHost: true` is
+set in the Auth.js config itself, so the variable is redundant here. Setting
+it does no harm.
 
 Set each for **Production** and **Preview** so preview deployments of
 future branches behave identically.
