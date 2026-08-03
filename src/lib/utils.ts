@@ -182,3 +182,20 @@ export function toCsv(rows: Record<string, unknown>[]): string {
     ...rows.map((r) => headers.map((h) => escape(r[h])).join(",")),
   ].join("\n");
 }
+
+/**
+ * The useful sentence out of a database error.
+ *
+ * Prisma messages open with a blank line and an `Invalid `prisma.x()`
+ * invocation:` preamble, so naively taking the first line yields "" and a
+ * diagnostic that trails off into nothing. What an operator needs is the line
+ * after that — "Can't reach database server at `host:5432`".
+ */
+export function errorSummary(error: unknown): string {
+  const lines = String(error instanceof Error ? error.message : error)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^Invalid `.*` invocation:?$/.test(line));
+  return lines[0] ?? "unknown error";
+}

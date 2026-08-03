@@ -239,10 +239,11 @@ admin input.
 | `npm run prisma:generate` | Regenerate the Prisma client |
 | `npm run db:deploy` | Apply `prisma/migrations` to the database |
 | `npm run db:setup` | `db:deploy` then `seed`, in one step |
+| `npm run db:check` | Diagnose the production database — config, connection, schema, seed state |
 | `npm run prisma:push` | Push the schema without a migration (development only) |
 | `npm run prisma:migrate` | Create a migration |
 | `npm run prisma:studio` | Browse the database |
-| `npm run seed` | Seed the QNITY 2026 baseline |
+| `npm run seed` | Seed the QNITY 2026 baseline (refuses to overwrite a populated database; `-- --force` to override) |
 
 ---
 

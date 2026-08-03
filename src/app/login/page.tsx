@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import {
   currentUser,
+  demoLoginClosedByDataSource,
   demoLoginEnabled,
   entraConfigured,
   secretConfigured,
@@ -89,6 +90,7 @@ export default async function LoginPage({
           callbackUrl={params.callbackUrl ?? "/"}
           entraEnabled={entraConfigured()}
           demoEnabled={demoLoginEnabled()}
+          demoClosedByLiveData={demoLoginClosedByDataSource()}
           secretMissing={!hasSecret}
           demoAccounts={demoAccounts}
         />

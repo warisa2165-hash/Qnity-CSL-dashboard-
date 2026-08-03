@@ -2,10 +2,18 @@
  * Seeds PostgreSQL with the QNITY CSL Laboratory Renovation 2026 baseline —
  * the same dataset the portal serves in mock mode.
  *
- *   npm run seed          (after `npm run prisma:push`)
+ *   npm run db:deploy     # create the schema first
+ *   npm run seed          # load the baseline
  *
- * Re-running is safe: the script clears the project graph first, so the
- * seed is the single source of truth for the baseline.
+ * The script clears the project graph and the user table before writing, so
+ * the seed is the single source of truth for the baseline. That makes it
+ * repeatable during setup and catastrophic afterwards: once the portal has
+ * carried a week of real edits, re-running it destroys them.
+ *
+ * So it refuses to run against a database that already holds data. Override
+ * only when you genuinely mean to discard what is there:
+ *
+ *   npm run seed -- --force        (or SEED_FORCE=1 npm run seed)
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -32,8 +40,58 @@ const prisma = new PrismaClient();
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 const optionalDate = (value: string | null) => (value ? date(value) : null);
 
+const forced =
+  process.argv.includes("--force") || process.env.SEED_FORCE === "1";
+
+/**
+ * Refuse to overwrite a database that is already in use.
+ *
+ * The check counts the two things that only exist once somebody has set this
+ * portal up: a project row and portal users. An empty database — the case the
+ * documented setup covers — passes straight through.
+ */
+async function guardExistingData() {
+  const [projects, users, audits] = await Promise.all([
+    prisma.project.count(),
+    prisma.user.count(),
+    prisma.auditLog.count(),
+  ]);
+
+  if (projects === 0 && users === 0) return;
+
+  if (!forced) {
+    console.error(
+      [
+        "",
+        "Refusing to seed: this database already holds data.",
+        "",
+        `  projects: ${projects}    users: ${users}    audit entries: ${audits}`,
+        "",
+        "Seeding deletes the whole project graph and every user, then rewrites",
+        "the baseline. If this is the production database, that discards real",
+        "project records and the audit trail that documents them.",
+        "",
+        "If you are sure, take a backup first:",
+        "",
+        '  pg_dump "$DIRECT_URL" --no-owner --format=custom --file=before-seed.dump',
+        "",
+        "then re-run with:",
+        "",
+        "  npm run seed -- --force",
+        "",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+
+  console.warn(
+    `⚠  --force: discarding ${projects} project(s), ${users} user(s) and ${audits} audit entries.`,
+  );
+}
+
 async function main() {
   console.log("Seeding QNITY CSL Laboratory Renovation 2026 baseline…");
+  await guardExistingData();
 
   /* ---------------------------------------------------------------- */
   /* Reset                                                             */

@@ -27,6 +27,7 @@ import * as data from "@/lib/data";
 import { readCollection, writeCollection, storeLocation, resetCollection } from "@/lib/data/store";
 import { recordAudit } from "@/lib/audit";
 import { riskLevelFromScore } from "@/lib/status";
+import { errorSummary } from "@/lib/utils";
 import type { Risk } from "@/lib/types";
 
 export interface ActionResult {
@@ -504,8 +505,8 @@ export async function customisedCollections(): Promise<string[]> {
 /** A failed write must say which layer failed, not just "something broke". */
 function writeFailure(error: unknown): string {
   if (usingDatabase()) {
-    const detail = error instanceof Error ? error.message.split("\n")[0] : "";
-    return `The change could not be written to the database${detail ? `: ${detail}` : "."}`;
+    return `The change could not be written to the database: ${errorSummary(error)}`;
   }
   return "The change could not be saved. Check the server log.";
 }
+

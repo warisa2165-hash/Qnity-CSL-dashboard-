@@ -21,6 +21,7 @@
 
 import { prisma } from "@/lib/db";
 import { ENTITIES, type EntityDef, type EntityKey } from "@/lib/records";
+import { errorSummary } from "@/lib/utils";
 
 type Row = Record<string, unknown>;
 
@@ -340,9 +341,7 @@ export async function databaseStatus(): Promise<DatabaseStatus> {
     return {
       connected: false,
       seeded: false,
-      detail: `PostgreSQL is unreachable, so pages are falling back to the built-in baseline and edits will fail: ${
-        error instanceof Error ? error.message.split("\n")[0] : "unknown error"
-      }`,
+      detail: `PostgreSQL is unreachable, so pages are falling back to the built-in baseline and edits will fail: ${errorSummary(error)}`,
     };
   }
 }

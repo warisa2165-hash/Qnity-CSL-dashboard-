@@ -81,8 +81,9 @@ createdb qnity_csl
 export DATABASE_URL="postgresql://qnity:<password>@<host>:5432/qnity_csl?schema=public"
 
 npm run prisma:generate
-npm run prisma:push        # or: npm run prisma:migrate  (tracked migrations)
+npm run db:deploy          # applies prisma/migrations — the tracked schema
 npm run seed               # loads the QNITY 2026 baseline
+npm run db:check           # confirms config, connection, schema and seed state
 ```
 
 Then set `DATA_SOURCE=prisma`. Re-running `npm run seed` is safe — it clears
@@ -116,7 +117,9 @@ AUTH_MICROSOFT_ENTRA_ID_ISSUER="https://login.microsoftonline.com/<tenant>/v2.0"
 PRIMARY_ADMIN_EMAIL="warisa.kantifong@qnity.com"
 INTERNAL_EMAIL_DOMAINS="qnity.com"
 
-ENABLE_DEMO_LOGIN=false          # REQUIRED in production
+ENABLE_DEMO_LOGIN=false          # redundant with DATA_SOURCE=prisma, which
+                                 # closes demo sign-in by default; harmless
+                                 # to state explicitly
 FILE_STORAGE_DRIVER=local
 MAX_UPLOAD_SIZE_MB=25
 ```
@@ -231,5 +234,6 @@ uses the browser's native print pipeline, so it behaves the same everywhere.
 | "Your Microsoft account is valid, but you have not been provisioned" | Expected — the identity has no active portal record. Invite or approve the user. |
 | `redirect_uri_mismatch` from Microsoft | The Entra ID redirect URI must be exactly `{AUTH_URL}/api/auth/callback/microsoft-entra-id`. |
 | Dashboard shows the mock figures in production | `DATA_SOURCE` is not `prisma`, or the database is unreachable and the layer fell back to the baseline. Check the server log. |
-| `No project row found` | `npm run seed` has not been run against this database. |
-| Admin actions report "Persisting it requires DATA_SOURCE=prisma" | Expected in mock mode — changes are validated and audited but not stored. |
+| `No project row found` | `npm run seed` has not been run against this database. `npm run db:check` reports it. |
+| Admin actions report "Persisting it requires DATA_SOURCE=prisma" | Expected in mock mode — changes are validated and audited but not stored. Set `DATA_SOURCE=prisma`. |
+| The login page offers no way in | With `DATA_SOURCE=prisma` demo sign-in is closed by default. Configure Entra ID, or set `ENABLE_DEMO_LOGIN=true` temporarily. |

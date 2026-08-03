@@ -7,8 +7,9 @@ mock dataset and demo sign-in enabled.
 **No database. No Microsoft Entra ID tenant. No production data.**
 
 **To make edits permanent on Vercel, you do not need to leave Vercel** —
-connect PostgreSQL and follow [`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md).
-That is the same platform, the same build, three more environment variables.
+connect Neon PostgreSQL and follow
+[`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md). Same platform, same build, four
+more environment variables and no code change.
 
 For self-hosting on a VM or Azure — PostgreSQL, Entra ID single sign-on,
 demo login disabled — see [`DEPLOYMENT.md`](DEPLOYMENT.md).
@@ -116,7 +117,7 @@ in as any of the ten demo accounts using the built-in password.
 | Variable | Value | Default if unset | Why set it |
 |---|---|---|---|
 | `DEMO_PASSWORD` | **choose** — `openssl rand -base64 18` | `qnity2026` | The default is published in this repository. On a public URL, change it. |
-| `ENABLE_DEMO_LOGIN` | `true` | enabled | Only the exact string `false` disables it, but stating it makes the intent explicit and is what you flip for production. |
+| `ENABLE_DEMO_LOGIN` | `true` | enabled *on mock deployments* | The default follows the data source: a mock deployment keeps the role switcher, a `DATA_SOURCE=prisma` deployment closes it automatically. Setting it explicitly makes the intent visible either way. |
 | `DATA_SOURCE` | `mock` | `mock` | Explicit is better than implicit when a database is added later. |
 
 ### Optional
@@ -227,8 +228,9 @@ configuration rather than code:
 2. Set `DATABASE_URL` (and `DIRECT_URL`), then flip `DATA_SOURCE=prisma`.
 3. Register the Entra ID application and set the three
    `AUTH_MICROSOFT_ENTRA_ID_*` variables plus `AUTH_URL`.
-4. Set `ENABLE_DEMO_LOGIN=false` — this is the step that closes the shared
-   password door.
+4. Remove `ENABLE_DEMO_LOGIN` (or set it to `false`) — with
+   `DATA_SOURCE=prisma` the shared-password door closes by default, so this
+   is only needed if it was explicitly set to `true`.
 5. Redeploy and re-run the step 5 checklist against real accounts.
 
 **Steps 1, 2 and 5 are covered end to end in
@@ -310,7 +312,7 @@ The Next 15 → 16 upgrade required three source changes, all mechanical:
 | `/login?error=Configuration`, or "Authentication is not configured correctly" | `AUTH_SECRET` never reached the runtime. Auth.js reports every config fault as the same opaque `Configuration` error, and an unset secret is by far the most common cause — the function log will show `MissingSecret`. The login page now detects this and prints the fix directly. Add `AUTH_SECRET` for **both** Production and Preview, then **redeploy** — an environment change alone does not rebuild. |
 | Every request redirects to `/login` in a loop | `AUTH_SECRET` is unset or differs between Production and Preview. Set it in both, then redeploy. |
 | Demo sign-in rejects a valid account | `DEMO_PASSWORD` was changed but the site was not redeployed. Environment changes need a redeploy. |
-| The login page offers no demo accounts | `ENABLE_DEMO_LOGIN` is `false`, or was set only for Production while you are on a preview URL. |
+| The login page offers no demo accounts | `ENABLE_DEMO_LOGIN` is `false`, or was set only for Production while you are on a preview URL — or `DATA_SOURCE=prisma`, which closes demo sign-in by default and says so on the page. |
 | Deployed but the dashboard is empty | `DATA_SOURCE` is misspelled. It must be exactly `mock` — or exactly `prisma` if you have connected a database. |
 | Edits disappear after a redeploy | Expected on mock data; see section 6. Connect PostgreSQL — [`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md). |
 | Region rejected on deploy | `sin1` may be unavailable on your plan. Remove `regions` from `vercel.json` or pick a region in Project → Settings → Functions. |

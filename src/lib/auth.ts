@@ -2,7 +2,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 
-import { getUsers } from "@/lib/data";
+import { dataSource, getUsers } from "@/lib/data";
 import type { Company, User, UserStatus } from "@/lib/types";
 import type { AccessProfile, Permission, Role } from "@/lib/rbac";
 
@@ -25,8 +25,30 @@ const PRIMARY_ADMIN_EMAIL = (
   process.env.PRIMARY_ADMIN_EMAIL ?? "warisa.kantifong@qnity.com"
 ).toLowerCase();
 
+/**
+ * Whether the shared-password demo provider is available.
+ *
+ * Explicit configuration always wins. When the variable is unset the default
+ * follows the data source: a mock deployment *is* a demonstration and keeps
+ * the role switcher, but a deployment reading and writing PostgreSQL is
+ * carrying real project records, and a door opened by one password published
+ * in this repository has no business standing in front of them. Converting to
+ * production therefore closes it by default rather than waiting for somebody
+ * to remember `ENABLE_DEMO_LOGIN=false`.
+ */
 export function demoLoginEnabled(): boolean {
-  return process.env.ENABLE_DEMO_LOGIN !== "false";
+  if (process.env.ENABLE_DEMO_LOGIN === "true") return true;
+  if (process.env.ENABLE_DEMO_LOGIN === "false") return false;
+  return dataSource() !== "prisma";
+}
+
+/**
+ * True when demo sign-in is off only because this deployment serves live
+ * data. The login page says so, because "no way in" needs to be
+ * distinguishable from "misconfigured" by whoever is doing the conversion.
+ */
+export function demoLoginClosedByDataSource(): boolean {
+  return dataSource() === "prisma" && process.env.ENABLE_DEMO_LOGIN !== "true";
 }
 
 export function entraConfigured(): boolean {

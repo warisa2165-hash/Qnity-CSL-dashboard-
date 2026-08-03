@@ -35,6 +35,7 @@ export function LoginForm({
   callbackUrl,
   entraEnabled,
   demoEnabled,
+  demoClosedByLiveData = false,
   secretMissing,
   demoAccounts,
 }: {
@@ -42,6 +43,8 @@ export function LoginForm({
   callbackUrl: string;
   entraEnabled: boolean;
   demoEnabled: boolean;
+  /** Demo sign-in is off because this deployment serves live data. */
+  demoClosedByLiveData?: boolean;
   secretMissing: boolean;
   demoAccounts: DemoAccount[];
 }) {
@@ -166,6 +169,27 @@ export function LoginForm({
                 </code>{" "}
                 to enable single sign-on. Use a demo account below in the
                 meantime.
+              </p>
+            </div>
+          )}
+
+          {/*
+            With a database connected the demo provider is off by default, so
+            an Entra-less deployment shows no way in at all. Whoever is doing
+            the conversion is the person who can fix that, so name the switch
+            rather than leaving them with a blank panel.
+          */}
+          {!demoEnabled && demoClosedByLiveData && (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-sm">
+              <p className="font-medium">Demo sign-in is disabled</p>
+              <p className="mt-1 text-muted-foreground">
+                This deployment serves live project data
+                (<code className="font-mono text-xs">DATA_SOURCE=prisma</code>),
+                so the shared demo password is closed by default. Sign in with
+                Microsoft Entra ID above. To reopen it temporarily while
+                migrating, set{" "}
+                <code className="font-mono text-xs">ENABLE_DEMO_LOGIN=true</code>{" "}
+                and redeploy.
               </p>
             </div>
           )}
