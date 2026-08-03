@@ -1,7 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 
 import { requirePage } from "@/lib/guard";
-import { getSafetyReports, safetyMonthly, safetySummary } from "@/lib/data";
+import { getSafetyMonthly, getSafetyReports, getSafetySummary } from "@/lib/data";
 import { formatDate, formatNumber, countBy, humanize } from "@/lib/utils";
 
 import { PageHeader, SectionTitle } from "@/components/dashboard/page-header";
@@ -28,7 +28,11 @@ const COLUMNS: Column[] = [
 
 export default async function SafetyPage() {
   const { can } = await requirePage("safety");
-  const reports = await getSafetyReports();
+  const [reports, safetyMonthly, safetySummary] = await Promise.all([
+    getSafetyReports(),
+    getSafetyMonthly(),
+    getSafetySummary(),
+  ]);
 
   const open = reports.filter((r) => r.status !== "CLOSED");
   const overdue = reports.filter((r) => r.status === "OVERDUE");

@@ -286,6 +286,13 @@ When you add a field:
    `src/lib/data/prisma-writer.ts` if the new column is nullable, clears to
    `""`, or is an integer.
 
+A collection that is exported statically rather than through a getter is the
+subtle version of this drift: it looks fine in both modes and is simply wrong
+in one of them. The executive S-curve, the design discipline chart and the
+safety rollup were all in that state, and are now ordinary getters. Only the
+document folder list and the gallery categories remain static, because they
+are taxonomy rather than project data.
+
 If the mock path and the Prisma path ever disagree, the mock dataset stops
 being a usable rehearsal of production. `npm run typecheck` catches most
 drift, because both paths satisfy the same interfaces.

@@ -13,8 +13,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   // Serverless hosts open a connection per invocation, so DATABASE_URL points
   // at a pooler (PgBouncer). Migrations cannot run through a transaction
   // pooler, so they use DIRECT_URL instead. With a plain PostgreSQL server
@@ -192,6 +192,8 @@ model Project {
   galleryPhotos     GalleryPhoto[]
   weeklyReports     WeeklyReport[]
   progressPoints    ProgressPoint[]
+  disciplineStats   DesignDisciplineStat[]
+  safetySummary     SafetySummary?
 }
 
 model Stakeholder {
@@ -337,6 +339,22 @@ model DesignPackage {
   updatedAt           DateTime           @updatedAt
 
   @@index([projectId, discipline])
+}
+
+/// Planned versus actual design completion per engineering discipline —
+/// the design page's headline chart. `planned` is approved-baseline data that
+/// does not exist on any individual package, which is why this is stored
+/// rather than derived from DesignPackage.percentComplete.
+model DesignDisciplineStat {
+  id         String  @id @default(cuid())
+  projectId  String
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  discipline String
+  sequence   Int
+  planned    Float
+  actual     Float
+
+  @@unique([projectId, discipline])
 }
 
 // ---------------------------------------------------------
@@ -625,6 +643,25 @@ model SafetyReport {
 
   @@unique([projectId, code])
   @@index([date])
+}
+
+/// Project-level safety rollup behind the KPI tiles, and the safety input to
+/// the executive health calculation. Several of these figures (manhours,
+/// permits, LTI-free days) come from the contractor's own HSE returns rather
+/// than from SafetyReport rows, so they are recorded rather than computed.
+model SafetySummary {
+  id                     String   @id @default(cuid())
+  projectId              String   @unique
+  project                Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ltiFreeDays            Int      @default(0)
+  totalManhours          Int      @default(0)
+  openFindings           Int      @default(0)
+  closedFindings         Int      @default(0)
+  overdueFindings        Int      @default(0)
+  safetyScore            Float    @default(100)
+  permitsIssuedThisMonth Int      @default(0)
+  toolboxTalksThisMonth  Int      @default(0)
+  updatedAt              DateTime @updatedAt
 }
 
 /// Monthly rollup powering the safety trend chart.

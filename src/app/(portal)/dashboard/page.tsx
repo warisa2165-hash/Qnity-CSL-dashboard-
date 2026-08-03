@@ -19,7 +19,7 @@ import {
 import { requirePage } from "@/lib/guard";
 import { canViewPage } from "@/lib/rbac";
 import { getExecutiveSummary } from "@/lib/analytics";
-import { getProject, progressCurve } from "@/lib/data";
+import { getProject, getProgressCurve } from "@/lib/data";
 import { formatDate, daysRemaining, percent } from "@/lib/utils";
 import { HEALTH_LABEL, healthTone, TONE_CLASSES } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -36,9 +36,10 @@ export const metadata = { title: "Executive Dashboard" };
 
 export default async function DashboardPage() {
   const { profile, user } = await requirePage("dashboard");
-  const [project, summary] = await Promise.all([
+  const [project, summary, progressCurve] = await Promise.all([
     getProject(),
     getExecutiveSummary(),
+    getProgressCurve(),
   ]);
 
   const { kpis, statuses } = summary;

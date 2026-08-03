@@ -22,6 +22,7 @@ import type {
   ActionItem,
   AuditLog,
   CapexEquipment,
+  DesignDisciplineStat,
   DesignPackage,
   DocumentRecord,
   DocumentSubmission,
@@ -30,10 +31,13 @@ import type {
   OwnerAttentionItem,
   PaymentMilestone,
   ProcurementPackage,
+  ProgressPoint,
   Project,
   ProjectPhase,
   Risk,
+  SafetyMonthlyStat,
   SafetyReport,
+  SafetySummary,
   User,
   WeeklyReport,
 } from "@/lib/types";
@@ -121,6 +125,10 @@ interface PrismaRepository {
   getUsers(): Promise<User[]>;
   getAccessRequests(): Promise<AccessRequest[]>;
   getAuditLogs(): Promise<AuditLog[]>;
+  getProgressCurve(): Promise<ProgressPoint[]>;
+  getDesignByDiscipline(): Promise<DesignDisciplineStat[]>;
+  getSafetyMonthly(): Promise<SafetyMonthlyStat[]>;
+  getSafetySummary(): Promise<SafetySummary>;
 }
 
 /**
@@ -181,10 +189,28 @@ export const getAccessRequests = () =>
   resolve("getAccessRequests", mock.accessRequests);
 export const getAuditLogs = () => resolve("getAuditLogs", mock.auditLogs);
 
-/* Static reference data — identical in both modes. */
-export const progressCurve = mock.progressCurve;
-export const designByDiscipline = mock.designByDiscipline;
-export const safetyMonthly = mock.safetyMonthly;
-export const safetySummary = mock.safetySummary;
+/*
+ * Charts and rollups.
+ *
+ * These were static exports of the mock module, which meant a
+ * DATA_SOURCE=prisma deployment served invented numbers on the executive
+ * S-curve, the design chart and every safety KPI while the registers beside
+ * them showed live data. They are ordinary getters now, so they follow the
+ * data source like everything else.
+ */
+export const getProgressCurve = () =>
+  resolve("getProgressCurve", mock.progressCurve as ProgressPoint[]);
+export const getDesignByDiscipline = () =>
+  resolve("getDesignByDiscipline", mock.designByDiscipline);
+export const getSafetyMonthly = () =>
+  resolve("getSafetyMonthly", mock.safetyMonthly);
+export const getSafetySummary = () =>
+  resolve("getSafetySummary", mock.safetySummary);
+
+/*
+ * Genuinely static: these are taxonomy, not project data. The folder list and
+ * the gallery's category list describe how the portal is organised, are
+ * identical in both modes, and have no meaningful "live" value to read.
+ */
 export const documentFolders = mock.documentFolders;
 export const galleryCategories = mock.galleryCategories;

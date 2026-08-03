@@ -108,20 +108,32 @@ The seed writes the same dataset the portal serves in mock mode — the real
 project structure, not placeholder rows:
 
 ```
-  ✓ 11 users                    ✓ 14 procurement packages
-  ✓ 4 access requests           ✓ 12 CAPEX equipment items
-  ✓ project QN-CSL-2026         ✓ 5 payment milestones
-  ✓ 6 phases, 6 schedule links  ✓ 15 risks
-  ✓ 13 milestones               ✓ 12 safety reports
-  ✓ 14 design packages          ✓ 24 actions
-  ✓ 18 document submissions     ✓ 8 owner attention items
-  ✓ 20 documents                ✓ 12 gallery photos
-  ✓ 2 weekly reports            ✓ 18 audit log entries
+  ✓ 11 users                          ✓ 14 procurement packages
+  ✓ 4 access requests                 ✓ 12 CAPEX equipment items
+  ✓ project QN-CSL-2026               ✓ 5 payment milestones
+  ✓ 6 phases, 6 schedule links        ✓ 15 risks
+  ✓ 13 milestones                     ✓ 12 safety reports, 6 monthly stats,
+  ✓ 14 design packages,                 1 safety summary
+    5 discipline stats                ✓ 24 actions
+  ✓ 18 document submissions           ✓ 8 owner attention items
+  ✓ 20 documents                      ✓ 12 gallery photos
+  ✓ 2 weekly reports                  ✓ 18 audit log entries
+  ✓ 12 S-curve points
 ```
 
-Those become ordinary editable rows. Correct them in the portal, or import
-CSV over them — the seed's job is to give every page a coherent starting
-state so nothing renders empty on day one.
+Every collection the portal serves in mock mode is written to the database —
+including the chart and rollup data behind the executive S-curve, the design
+discipline chart and the safety KPI tiles. Those used to be static exports of
+the mock module, which meant a `prisma` deployment showed invented safety
+figures beside live registers.
+
+Only two things stay in code: the document folder list and the gallery
+category list. They are taxonomy — how the portal is organised — not project
+data, and are identical in both modes.
+
+Everything seeded becomes an ordinary row. Correct it in the portal, edit it
+in SQL, or import CSV over it — the seed's job is to give every page a
+coherent starting state so nothing renders empty on day one.
 
 ### The seed is destructive, and refuses to prove it twice
 
@@ -157,13 +169,15 @@ Connection
   ✓ PostgreSQL 16.13
 
 Schema
-  ✓ 1 migration(s) applied
+  ✓ 2 migration(s) applied
       20260803000000_init
+      20260803120000_design_discipline_and_safety_summary
 
 Data
   ✓ 1 project, 11 users
   ✓ 13 milestones · 15 risks · 24 actions · 14 procurement packages
   ✓ 18 audit entries
+  ✓ 12 S-curve points · 5 discipline stats · safety summary present
 
 All checks passed. The portal is ready to serve live data.
 ```
@@ -263,6 +277,11 @@ Sign in as the administrator and check, in order:
       function log.
 - [ ] **User management** → change a role → reload. It stuck.
 - [ ] Sign in as a leadership account: no *New risk* button, no edit pencils.
+- [ ] **Safety** shows a safety score of 94%, 198 LTI-free days and 8,890
+      manhours, and **Executive Dashboard** draws the S-curve. Those come
+      from `SafetySummary`, `SafetyMonthlyStat` and `ProgressPoint`; if the
+      seed did not run they silently fall back to built-in figures, which
+      `npm run db:check` reports.
 
 ---
 

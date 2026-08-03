@@ -21,13 +21,17 @@ import { PrismaClient } from "@prisma/client";
 import { users, accessRequests } from "../src/lib/data/mock/users";
 import { project, phases, progressCurve } from "../src/lib/data/mock/project";
 import { milestones } from "../src/lib/data/mock/milestones";
-import { designPackages } from "../src/lib/data/mock/design";
+import { designPackages, designByDiscipline } from "../src/lib/data/mock/design";
 import { submissions } from "../src/lib/data/mock/submissions";
 import { procurementPackages } from "../src/lib/data/mock/procurement";
 import { capexEquipment } from "../src/lib/data/mock/capex";
 import { paymentMilestones } from "../src/lib/data/mock/payments";
 import { risks } from "../src/lib/data/mock/risks";
-import { safetyReports, safetyMonthly } from "../src/lib/data/mock/safety";
+import {
+  safetyReports,
+  safetyMonthly,
+  safetySummary,
+} from "../src/lib/data/mock/safety";
 import { actionItems } from "../src/lib/data/mock/actions";
 import { attentionItems } from "../src/lib/data/mock/attention";
 import { galleryPhotos } from "../src/lib/data/mock/gallery";
@@ -270,7 +274,18 @@ async function main() {
       pendingAction: p.pendingAction,
     })),
   });
-  console.log(`  ✓ ${designPackages.length} design packages`);
+  await prisma.designDisciplineStat.createMany({
+    data: designByDiscipline.map((d, i) => ({
+      projectId,
+      discipline: d.discipline,
+      sequence: i,
+      planned: d.planned,
+      actual: d.actual,
+    })),
+  });
+  console.log(
+    `  ✓ ${designPackages.length} design packages, ${designByDiscipline.length} discipline stats`,
+  );
 
   for (const s of submissions) {
     await prisma.documentSubmission.create({
@@ -428,7 +443,12 @@ async function main() {
   await prisma.safetyMonthlyStat.createMany({
     data: safetyMonthly.map((m, i) => ({ ...m, sequence: i })),
   });
-  console.log(`  ✓ ${safetyReports.length} safety reports`);
+  await prisma.safetySummary.create({
+    data: { projectId, ...safetySummary },
+  });
+  console.log(
+    `  ✓ ${safetyReports.length} safety reports, ${safetyMonthly.length} monthly stats, 1 safety summary`,
+  );
 
   await prisma.actionItem.createMany({
     data: actionItems.map((a) => ({

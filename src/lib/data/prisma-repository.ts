@@ -15,6 +15,7 @@ import type {
   AuditLog,
   CapexEquipment,
   Company,
+  DesignDisciplineStat,
   DesignPackage,
   DocumentRecord,
   DocumentSubmission,
@@ -23,10 +24,13 @@ import type {
   OwnerAttentionItem,
   PaymentMilestone,
   ProcurementPackage,
+  ProgressPoint,
   Project,
   ProjectPhase,
   Risk,
+  SafetyMonthlyStat,
   SafetyReport,
+  SafetySummary,
   User,
   WeeklyReport,
 } from "@/lib/types";
@@ -418,6 +422,61 @@ export const repository = {
       nextWeekFocus: r.nextWeekFocus,
       highlights: r.highlights,
     }));
+  },
+
+  /* ---------------- Charts and rollups ---------------- */
+
+  async getProgressCurve(): Promise<ProgressPoint[]> {
+    const rows = await prisma.progressPoint.findMany({
+      orderBy: { sequence: "asc" },
+    });
+    return rows.map((r) => ({
+      month: r.month,
+      planned: r.planned,
+      actual: r.actual,
+    }));
+  },
+
+  async getDesignByDiscipline(): Promise<DesignDisciplineStat[]> {
+    const rows = await prisma.designDisciplineStat.findMany({
+      orderBy: { sequence: "asc" },
+    });
+    return rows.map((r) => ({
+      discipline: r.discipline,
+      planned: r.planned,
+      actual: r.actual,
+    }));
+  },
+
+  async getSafetyMonthly(): Promise<SafetyMonthlyStat[]> {
+    const rows = await prisma.safetyMonthlyStat.findMany({
+      orderBy: { sequence: "asc" },
+    });
+    return rows.map((r) => ({
+      month: r.month,
+      lti: r.lti,
+      nearMiss: r.nearMiss,
+      firstAid: r.firstAid,
+      observations: r.observations,
+      toolboxTalks: r.toolboxTalks,
+      manhours: r.manhours,
+      safetyScore: r.safetyScore,
+    }));
+  },
+
+  async getSafetySummary(): Promise<SafetySummary> {
+    const row = await prisma.safetySummary.findFirst();
+    if (!row) throw new Error("No safety summary row — run `npm run seed`.");
+    return {
+      ltiFreeDays: row.ltiFreeDays,
+      totalManhours: row.totalManhours,
+      openFindings: row.openFindings,
+      closedFindings: row.closedFindings,
+      overdueFindings: row.overdueFindings,
+      safetyScore: row.safetyScore,
+      permitsIssuedThisMonth: row.permitsIssuedThisMonth,
+      toolboxTalksThisMonth: row.toolboxTalksThisMonth,
+    };
   },
 
   async getUsers(): Promise<User[]> {

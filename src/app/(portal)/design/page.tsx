@@ -1,5 +1,5 @@
 import { requirePage } from "@/lib/guard";
-import { designByDiscipline, getDesignPackages } from "@/lib/data";
+import { getDesignByDiscipline, getDesignPackages } from "@/lib/data";
 import { average } from "@/lib/utils";
 
 import { PageHeader, SectionTitle } from "@/components/dashboard/page-header";
@@ -27,7 +27,10 @@ const COLUMNS: Column[] = [
 
 export default async function DesignPage() {
   const { can } = await requirePage("design");
-  const packages = await getDesignPackages();
+  const [packages, designByDiscipline] = await Promise.all([
+    getDesignPackages(),
+    getDesignByDiscipline(),
+  ]);
 
   const approved = packages.filter((p) =>
     ["APPROVED", "APPROVED_WITH_COMMENT"].includes(p.reviewStatus),

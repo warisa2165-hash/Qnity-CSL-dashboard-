@@ -173,16 +173,29 @@ if (connected) {
     warn("skipped — migrate the schema first");
   } else {
     try {
-      const [projects, users, risks, milestones, actions, procurement, audits] =
-        await Promise.all([
-          prisma.project.count(),
-          prisma.user.count(),
-          prisma.risk.count(),
-          prisma.milestone.count(),
-          prisma.actionItem.count(),
-          prisma.procurementPackage.count(),
-          prisma.auditLog.count(),
-        ]);
+      const [
+        projects,
+        users,
+        risks,
+        milestones,
+        actions,
+        procurement,
+        audits,
+        curve,
+        disciplines,
+        summary,
+      ] = await Promise.all([
+        prisma.project.count(),
+        prisma.user.count(),
+        prisma.risk.count(),
+        prisma.milestone.count(),
+        prisma.actionItem.count(),
+        prisma.procurementPackage.count(),
+        prisma.auditLog.count(),
+        prisma.progressPoint.count(),
+        prisma.designDisciplineStat.count(),
+        prisma.safetySummary.count(),
+      ]);
 
       if (projects === 0) {
         fail(
@@ -196,6 +209,17 @@ if (connected) {
         ok(`${audits} audit entries`);
         if (users === 0) {
           fail("no users — nobody can sign in. Run `npm run seed`.");
+        }
+        // The charts fail quietly rather than loudly: a missing rollup makes
+        // the dashboard fall back to built-in figures that look plausible.
+        if (curve === 0 || disciplines === 0 || summary === 0) {
+          caution(
+            `chart data incomplete (S-curve ${curve}, disciplines ${disciplines}, safety summary ${summary}) — those panels will show built-in figures. Re-run \`npm run seed\`.`,
+          );
+        } else {
+          ok(
+            `${curve} S-curve points · ${disciplines} discipline stats · safety summary present`,
+          );
         }
       }
     } catch (error) {

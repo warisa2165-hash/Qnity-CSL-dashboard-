@@ -257,6 +257,7 @@ export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
     capex,
     payments,
     attention,
+    safetySummary,
   ] = await Promise.all([
     data.getProject(),
     data.getMilestones(),
@@ -267,6 +268,7 @@ export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
     data.getCapex(),
     data.getPayments(),
     data.getAttentionItems(),
+    data.getSafetySummary(),
   ]);
 
   const rStats = riskStats(risks);
@@ -278,9 +280,9 @@ export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
   const mStats = milestoneStats(milestones);
 
   const safety: Health =
-    data.safetySummary.safetyScore >= 95
+    safetySummary.safetyScore >= 95
       ? "GREEN"
-      : data.safetySummary.safetyScore >= 90
+      : safetySummary.safetyScore >= 90
         ? "YELLOW"
         : "RED";
 
@@ -339,7 +341,7 @@ export async function getExecutiveSummary(): Promise<ExecutiveSummary> {
       designProgress: project.designProgress,
       procurementProgress: project.procurementProgress,
       constructionProgress: project.constructionProgress,
-      safetyScore: data.safetySummary.safetyScore,
+      safetyScore: safetySummary.safetyScore,
       openRisks: rStats.open,
       overdueActions: aStats.overdue,
       pendingApprovals:

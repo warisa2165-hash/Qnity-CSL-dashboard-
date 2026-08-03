@@ -428,6 +428,36 @@ export interface SafetyReport {
   evidenceUrl: string | null;
 }
 
+/** A point on the executive S-curve. `actual` is null for future months. */
+export interface ProgressPoint {
+  month: string;
+  planned: number;
+  actual: number | null;
+}
+
+/** Planned versus actual design completion for one engineering discipline. */
+export interface DesignDisciplineStat {
+  discipline: string;
+  planned: number;
+  actual: number;
+}
+
+/**
+ * Project-level safety rollup behind the KPI tiles. Several figures come from
+ * the contractor's HSE returns rather than from SafetyReport rows, so this is
+ * recorded data, not an aggregate of the register.
+ */
+export interface SafetySummary {
+  ltiFreeDays: number;
+  totalManhours: number;
+  openFindings: number;
+  closedFindings: number;
+  overdueFindings: number;
+  safetyScore: number;
+  permitsIssuedThisMonth: number;
+  toolboxTalksThisMonth: number;
+}
+
 export interface SafetyMonthlyStat {
   month: string;
   lti: number;
