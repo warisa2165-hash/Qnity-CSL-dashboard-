@@ -15,6 +15,11 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Serverless hosts open a connection per invocation, so DATABASE_URL points
+  // at a pooler (PgBouncer). Migrations cannot run through a transaction
+  // pooler, so they use DIRECT_URL instead. With a plain PostgreSQL server
+  // that has no pooler, set both to the same connection string.
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------

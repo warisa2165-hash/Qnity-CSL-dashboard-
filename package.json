@@ -5,7 +5,7 @@
   "description": "QNITY CSL Laboratory Renovation 2026 - Project Dashboard Portal",
   "scripts": {
     "dev": "next dev",
-    "//build": "prisma generate runs first because Vercel restores a cached node_modules and skips the @prisma/client postinstall that would otherwise generate it. Generation needs no database connection, so this is safe in mock mode.",
+    "//build": "prisma generate runs first because Vercel restores a cached node_modules and skips the @prisma/client postinstall that would otherwise generate it. Generation needs no database connection, so this is safe in mock mode. Migrations are NOT run here — see scripts/db-deploy.mjs and docs/DEPLOY-VERCEL.md.",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
@@ -14,6 +14,9 @@
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "//db:deploy": "Applies prisma/migrations to DATABASE_URL. No-ops with a clear message when no database is configured, so it is safe to chain into any deploy command.",
+    "db:deploy": "node scripts/db-deploy.mjs",
+    "db:setup": "node scripts/db-deploy.mjs && tsx prisma/seed.ts",
     "seed": "tsx prisma/seed.ts"
   },
   "prisma": {

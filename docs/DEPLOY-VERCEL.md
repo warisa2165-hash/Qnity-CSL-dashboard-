@@ -6,7 +6,11 @@ mock dataset and demo sign-in enabled.
 
 **No database. No Microsoft Entra ID tenant. No production data.**
 
-For the real production deployment — PostgreSQL, Entra ID single sign-on,
+**To make edits permanent on Vercel, you do not need to leave Vercel** —
+connect PostgreSQL and follow [`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md).
+That is the same platform, the same build, three more environment variables.
+
+For self-hosting on a VM or Azure — PostgreSQL, Entra ID single sign-on,
 demo login disabled — see [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ---
@@ -180,12 +184,12 @@ Not defects — consequences of running mock-only on a read-only filesystem:
   directory is read-only, so the JSON store falls back to `/tmp`. That
   survives a page refresh and stays for the life of the instance; it is wiped
   when the instance recycles. The edit pages and the Admin Panel state this
-  on screen rather than losing work quietly. To keep changes permanently,
-  run the portal where `data/` is writable, or connect PostgreSQL and set
-  `DATA_SOURCE=prisma`.
+  on screen rather than losing work quietly.
+  **Fix: [`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md)** — with a database
+  connected, the same forms write rows that persist through redeploys.
 - **Other admin actions do not persist.** Invite, disable, change role and
   approve-access-request are validated, permission-checked and written to the
-  audit trail, then discarded. The UI says so on screen.
+  audit trail, then discarded. The UI says so on screen. Same fix.
 - **File upload and document download are disabled.** Vercel's filesystem is
   read-only and the mock records carry no files. The buttons render disabled
   so the intended workflow is still visible.
@@ -219,16 +223,19 @@ demo password. Availability depends on your Vercel plan.
 When UAT signs off, the same project becomes production by changing
 configuration rather than code:
 
-1. Provision PostgreSQL, then `npm run prisma:push` and `npm run seed`.
-2. Set `DATABASE_URL` and flip `DATA_SOURCE=prisma`.
+1. Provision PostgreSQL, then `npm run db:deploy` and `npm run seed`.
+2. Set `DATABASE_URL` (and `DIRECT_URL`), then flip `DATA_SOURCE=prisma`.
 3. Register the Entra ID application and set the three
    `AUTH_MICROSOFT_ENTRA_ID_*` variables plus `AUTH_URL`.
 4. Set `ENABLE_DEMO_LOGIN=false` — this is the step that closes the shared
    password door.
 5. Redeploy and re-run the step 5 checklist against real accounts.
 
-[`DEPLOYMENT.md`](DEPLOYMENT.md) covers each of these in full, including
-the Entra ID app registration walkthrough and the pre-launch checklist.
+**Steps 1, 2 and 5 are covered end to end in
+[`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md)** — which database to choose, why
+there are two connection strings, and what to click to prove edits now
+persist. [`DEPLOYMENT.md`](DEPLOYMENT.md) covers the Entra ID app
+registration walkthrough and the pre-launch checklist.
 
 ---
 
@@ -304,5 +311,6 @@ The Next 15 → 16 upgrade required three source changes, all mechanical:
 | Every request redirects to `/login` in a loop | `AUTH_SECRET` is unset or differs between Production and Preview. Set it in both, then redeploy. |
 | Demo sign-in rejects a valid account | `DEMO_PASSWORD` was changed but the site was not redeployed. Environment changes need a redeploy. |
 | The login page offers no demo accounts | `ENABLE_DEMO_LOGIN` is `false`, or was set only for Production while you are on a preview URL. |
-| Deployed but the dashboard is empty | `DATA_SOURCE` is misspelled. It must be exactly `mock`. |
+| Deployed but the dashboard is empty | `DATA_SOURCE` is misspelled. It must be exactly `mock` — or exactly `prisma` if you have connected a database. |
+| Edits disappear after a redeploy | Expected on mock data; see section 6. Connect PostgreSQL — [`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md). |
 | Region rejected on deploy | `sin1` may be unavailable on your plan. Remove `regions` from `vercel.json` or pick a region in Project → Settings → Functions. |

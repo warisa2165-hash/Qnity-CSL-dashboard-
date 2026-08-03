@@ -213,7 +213,7 @@ plain JSON, meant to be committed: see [`data/README.md`](data/README.md).
 DATABASE_URL="postgresql://user:pass@host:5432/qnity_csl?schema=public"
 
 # 2. Create the schema and load the QNITY baseline
-npm run prisma:push
+npm run db:deploy
 npm run seed
 
 # 3. Switch the data source
@@ -237,7 +237,9 @@ admin input.
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run prisma:generate` | Regenerate the Prisma client |
-| `npm run prisma:push` | Push the schema to the database |
+| `npm run db:deploy` | Apply `prisma/migrations` to the database |
+| `npm run db:setup` | `db:deploy` then `seed`, in one step |
+| `npm run prisma:push` | Push the schema without a migration (development only) |
 | `npm run prisma:migrate` | Create a migration |
 | `npm run prisma:studio` | Browse the database |
 | `npm run seed` | Seed the QNITY 2026 baseline |

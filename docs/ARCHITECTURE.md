@@ -93,6 +93,48 @@ risk's `level` from likelihood × impact, an action's `lastUpdated` from the
 edit itself — because a hand-entered value there would let the register
 contradict itself.
 
+### Writing: two backends, one set of rules
+
+`saveRecord()` chooses a backend on the last line of the work, not the first:
+
+```ts
+const outcome = usingDatabase()
+  ? await saveToDatabase(key, entity, id, record)   // data/prisma-writer.ts
+  : await saveToFiles(key, entity, id, record);     // data/store.ts
+```
+
+Permission check, coercion, validation, derived fields, the audit entry and
+`revalidatePath()` all sit above that branch and are shared. The rules about
+who may change what must not be able to drift between the two modes, and the
+only way to guarantee that is to have one copy of them.
+
+`prisma-writer.ts` is the mirror of `prisma-repository.ts`. The repository
+maps rows onto domain shapes; the writer maps edited form values back onto
+rows. It exists because the form layer and the database disagree about four
+things — dates arrive as `2026-08-01` where the column wants `DateTime`,
+money as a JS number where the column is `Decimal(14,2)`, a cleared field as
+`null` where most text columns are `NOT NULL`, and every row belongs to a
+project the form never mentions. Each entity therefore declares which columns
+are nullable, which clear to `""`, and which are integers; `toRow()` is the
+single place the translation happens. A field that cannot be represented is
+reported back as *unchanged* rather than quietly dropped.
+
+### What happens when PostgreSQL is unreachable
+
+Reads fall back to the built-in dataset so the dashboard stays up, and say so
+on screen. Two things deliberately do not:
+
+- **Writes never fall back.** An edit saved against fallback data would be a
+  phantom — visible, then gone. `saveRecord()` fails and keeps the dialog open.
+- **Identity never falls back.** `getUsers`, `getAccessRequests` and
+  `getAuditLogs` return empty rather than the shipped demo accounts, whose
+  password is published in this repository. An outage must not become an
+  access-control failure.
+
+The read fallback needs `return await` in `fromPrisma()`, not `return`:
+returning the promise unawaited hands it to the caller outside the `try`, so
+the rejection escapes the `catch` and 500s the page instead.
+
 ### Adding a field
 
 1. Add it to the interface in `lib/types.ts`.
@@ -101,7 +143,9 @@ contradict itself.
    `prisma-repository.ts`.
 4. Add it to the page's `Column[]` config.
 5. If the register is editable, add a `FieldDef` to `lib/records.ts` — that
-   alone puts it in the form, the validation and the saved record.
+   alone puts it in the form, the validation and the saved record — and
+   declare the column in `prisma-writer.ts` if it is nullable, clears to `""`,
+   or is an integer.
 
 ---
 

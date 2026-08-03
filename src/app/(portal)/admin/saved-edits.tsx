@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { HardDrive, Loader2, RotateCcw } from "lucide-react";
+import { Database, HardDrive, Loader2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,19 +10,31 @@ import { Badge } from "@/components/ui/badge";
 import { ENTITIES } from "@/lib/records";
 import { resetEntity } from "@/lib/actions/records";
 
+/** The PostgreSQL table behind each editable register. */
+const TABLES: Record<string, string> = {
+  project: "Project",
+  milestones: "Milestone",
+  risks: "Risk",
+  actions: "ActionItem",
+  procurement: "ProcurementPackage",
+};
+
 /**
- * Shows which collections have been edited away from the built-in baseline,
- * and lets the administrator put any of them back. Without this the JSON
- * store would be a one-way door: once a collection had been saved there would
- * be no way, short of shell access, to return to the shipped dataset.
+ * Where each editable register is stored, and — with the JSON store — which
+ * ones have been edited away from the built-in baseline, with a way back.
+ * Without that the store would be a one-way door: once a collection had been
+ * saved there would be no way, short of shell access, to return to the
+ * shipped dataset. With PostgreSQL connected there is no overlay to undo, so
+ * the card reports the connection instead.
  */
 export function SavedEdits({
   storage,
   customised,
 }: {
-  storage: { durable: boolean; reason: string };
+  storage: { durable: boolean; reason: string; source: "mock" | "prisma" };
   customised: string[];
 }) {
+  const onDatabase = storage.source === "prisma";
   const router = useRouter();
   const [busy, setBusy] = React.useState<string | null>(null);
   const [confirming, setConfirming] = React.useState<string | null>(null);
@@ -49,10 +61,16 @@ export function SavedEdits({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
-          <HardDrive
-            className={`h-4 w-4 ${storage.durable ? "text-success" : "text-warning"}`}
-          />
-          Saved edits (JSON store)
+          {onDatabase ? (
+            <Database
+              className={`h-4 w-4 ${storage.durable ? "text-success" : "text-destructive"}`}
+            />
+          ) : (
+            <HardDrive
+              className={`h-4 w-4 ${storage.durable ? "text-success" : "text-warning"}`}
+            />
+          )}
+          {onDatabase ? "Record storage (PostgreSQL)" : "Saved edits (JSON store)"}
         </CardTitle>
         <p className="text-sm text-muted-foreground">{storage.reason}</p>
       </CardHeader>
@@ -70,28 +88,38 @@ export function SavedEdits({
                     {entity.collection}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {edited
-                      ? `Reading from data/${entity.collection}.json`
-                      : "Reading the built-in baseline"}
+                    {onDatabase
+                      ? `Reading and writing the ${TABLES[key] ?? key} table`
+                      : edited
+                        ? `Reading from data/${entity.collection}.json`
+                        : "Reading the built-in baseline"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={edited ? "default" : "outline"}>
-                    {edited ? "Edited" : "Baseline"}
-                  </Badge>
-                  <Button
-                    variant={confirming === key ? "destructive" : "outline"}
-                    size="sm"
-                    disabled={!edited || busy === key}
-                    onClick={() => handleReset(key)}
-                  >
-                    {busy === key ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RotateCcw className="h-4 w-4" />
-                    )}
-                    {confirming === key ? "Confirm reset" : "Reset"}
-                  </Button>
+                  {onDatabase ? (
+                    <Badge variant={storage.durable ? "default" : "outline"}>
+                      {storage.durable ? "Live" : "Unavailable"}
+                    </Badge>
+                  ) : (
+                    <>
+                      <Badge variant={edited ? "default" : "outline"}>
+                        {edited ? "Edited" : "Baseline"}
+                      </Badge>
+                      <Button
+                        variant={confirming === key ? "destructive" : "outline"}
+                        size="sm"
+                        disabled={!edited || busy === key}
+                        onClick={() => handleReset(key)}
+                      >
+                        {busy === key ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-4 w-4" />
+                        )}
+                        {confirming === key ? "Confirm reset" : "Reset"}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </li>
             );
@@ -104,14 +132,24 @@ export function SavedEdits({
           </p>
         )}
 
-        {!storage.durable && (
-          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
-            Edits made on this host are written to a temporary directory and are
-            lost when the instance recycles. Deploy where the{" "}
-            <code className="font-mono text-xs">data/</code> directory is
-            writable, or connect PostgreSQL, to keep them permanently.
-          </p>
-        )}
+        {!storage.durable &&
+          (onDatabase ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
+              Pages are falling back to the built-in dataset and every edit will
+              fail until the database responds. Check{" "}
+              <code className="font-mono text-xs">DATABASE_URL</code>, then run{" "}
+              <code className="font-mono text-xs">npm run db:deploy</code> and{" "}
+              <code className="font-mono text-xs">npm run seed</code> if the
+              database is new.
+            </p>
+          ) : (
+            <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
+              Edits made on this host are written to a temporary directory and
+              are lost when the instance recycles. Deploy where the{" "}
+              <code className="font-mono text-xs">data/</code> directory is
+              writable, or connect PostgreSQL, to keep them permanently.
+            </p>
+          ))}
       </CardContent>
     </Card>
   );

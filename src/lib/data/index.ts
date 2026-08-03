@@ -86,10 +86,18 @@ async function fromPrisma<K extends keyof PrismaRepository>(
     const repo = (await import("./prisma-repository")) as {
       repository: PrismaRepository;
     };
-    return repo.repository[key]() as ReturnType<PrismaRepository[K]>;
-  } catch {
-    // Database unavailable — fall back to the mock dataset rather than
-    // rendering an empty executive dashboard.
+    // `return await` is load-bearing: returning the promise unawaited hands
+    // it to the caller *outside* this try block, so a query rejection would
+    // escape the catch below and 500 the page instead of falling back.
+    return (await repo.repository[key]()) as ReturnType<PrismaRepository[K]>;
+  } catch (error) {
+    // Database unavailable — fall back to the built-in dataset rather than
+    // rendering an empty executive dashboard. This is a real failure, not a
+    // mode: log it loudly, because the page it produces looks perfectly
+    // healthy. The admin panel reports the connection state for the same
+    // reason (see `databaseStatus()`), and writes never fall back — an edit
+    // made against fallback data fails rather than appearing to succeed.
+    console.error(`[data] ${key} could not be read from PostgreSQL`, error);
     return null;
   }
 }
@@ -115,6 +123,22 @@ interface PrismaRepository {
   getAuditLogs(): Promise<AuditLog[]>;
 }
 
+/**
+ * Collections that must never fall back to the built-in dataset.
+ *
+ * Project data falling back keeps an executive dashboard readable through a
+ * database blip, which is a fair trade. Identity data is different: signing
+ * people in against the shipped demo accounts — whose password is published
+ * in this repository — because PostgreSQL was briefly unreachable would turn
+ * an outage into an access-control failure. These fail closed instead, and
+ * the audit trail refuses to show entries it cannot vouch for.
+ */
+const NEVER_FALL_BACK: ReadonlySet<keyof PrismaRepository> = new Set([
+  "getUsers",
+  "getAccessRequests",
+  "getAuditLogs",
+]);
+
 async function resolve<T>(
   key: keyof PrismaRepository,
   mockValue: T,
@@ -122,6 +146,7 @@ async function resolve<T>(
   if (dataSource() === "prisma") {
     const live = await fromPrisma(key);
     if (live) return live as T;
+    if (NEVER_FALL_BACK.has(key)) return [] as unknown as T;
   }
   return mockValue;
 }

@@ -38,7 +38,10 @@ still works and the new values appear immediately, but they are lost when the
 instance is recycled. The edit pages say so explicitly in that situation, and
 the Admin Panel shows the active storage location. To keep changes
 permanently, run the portal somewhere this directory is writable, or connect
-PostgreSQL and set `DATA_SOURCE=prisma`.
+PostgreSQL and set `DATA_SOURCE=prisma` — see docs/VERCEL-POSTGRES.md.
+
+With `DATA_SOURCE=prisma` this directory is ignored entirely: the same edit
+forms write rows to PostgreSQL, and nothing reads or writes these files.
 
 ## Editing by hand
 

@@ -58,13 +58,18 @@ optional values are `null` rather than `undefined`.
 
 ```bash
 export DATABASE_URL="postgresql://qnity:<password>@<host>:5432/qnity_csl?schema=public"
-npm run prisma:push
+export DIRECT_URL="$DATABASE_URL"   # a pooled DATABASE_URL needs a direct one here
+npm run db:deploy     # applies prisma/migrations — creates every table
 npm run seed          # loads the QNITY 2026 baseline as a starting point
 export DATA_SOURCE=prisma
 ```
 
-The portal now serves the database. From here, every route below writes into
-the same schema.
+The portal now serves the database, and the five editable registers write
+back to it. From here, every route below writes into the same schema.
+
+On Vercel this is three environment variables and a redeploy — see
+[`VERCEL-POSTGRES.md`](VERCEL-POSTGRES.md) for the connection-pooling detail
+that a serverless host makes unavoidable.
 
 ---
 
@@ -205,9 +210,34 @@ types, so a crafted request cannot introduce fields the form never offered.
 Permissions are re-derived from the session on every call, never taken from the
 client.
 
-To write those same edits to PostgreSQL instead, set `DATA_SOURCE=prisma`. The
-API routes under `src/app/api/` carry the pattern: permission check → Zod
-validation → Prisma write → `recordAudit()`. Extend it per register:
+With `DATA_SOURCE=prisma` the *same forms* write to PostgreSQL instead — no
+component, no permission and no validation changes. `saveRecord()` picks the
+backend at the last moment:
+
+```ts
+const outcome = usingDatabase()
+  ? await saveToDatabase(key, entity, id, record)   // lib/data/prisma-writer.ts
+  : await saveToFiles(key, entity, id, record);     // lib/data/store.ts
+```
+
+Everything above that line — the permission check, the field coercion, the
+derived fields, the audit entry, the cache revalidation — is shared, so the
+rules about who may change what cannot drift between the two modes.
+
+`prisma-writer.ts` is the mirror of `prisma-repository.ts`: the repository maps
+rows onto domain shapes for reading, the writer maps edited form values back
+onto rows. It exists because the form layer and the database disagree about
+four things, and a naive `data: values` breaks on each — dates arrive as
+`2026-08-01` where the column wants `DateTime`, money arrives as a JS number
+where the column is `Decimal(14,2)`, a cleared field arrives as `null` where
+most text columns are `NOT NULL`, and every row belongs to a project the form
+never mentions. Each entity therefore declares which of its columns are
+nullable, which clear to `""`, and which are integers.
+
+To make a *new* register editable, add it to `lib/records.ts` and to those
+three declarations. To expose a register through an API instead, the routes
+under `src/app/api/` carry the pattern: permission check → Zod validation →
+Prisma write → `recordAudit()`:
 
 ```ts
 export async function PATCH(request: Request, { params }) {
@@ -249,9 +279,12 @@ When you add a field:
 
 1. `src/lib/types.ts` — the interface.
 2. `src/lib/data/mock/*.ts` — the mock record.
-3. `prisma/schema.prisma` — the column, then `npm run prisma:push`.
-4. `src/lib/data/prisma-repository.ts` — the mapping.
+3. `prisma/schema.prisma` — the column, then `npm run prisma:migrate`.
+4. `src/lib/data/prisma-repository.ts` — the read mapping.
 5. The page's `Column[]` config.
+6. If the register is editable: `src/lib/records.ts` for the form field, and
+   `src/lib/data/prisma-writer.ts` if the new column is nullable, clears to
+   `""`, or is an integer.
 
 If the mock path and the Prisma path ever disagree, the mock dataset stops
 being a usable rehearsal of production. `npm run typecheck` catches most

@@ -248,11 +248,16 @@ export default async function AdminPage() {
             Current data source
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-1.5">
           <p className="text-sm text-muted-foreground">
-            <span className="font-mono text-xs">{dataSource()}</span> — see{" "}
-            <code className="font-mono text-xs">docs/DATA-INTEGRATION.md</code>{" "}
-            for connecting Excel, SharePoint, Power BI or manual admin input.
+            <span className="font-mono text-xs">{dataSource()}</span> —{" "}
+            {storage.reason}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            See <code className="font-mono text-xs">docs/DATA-INTEGRATION.md</code>{" "}
+            for connecting Excel, SharePoint, Power BI or manual admin input,
+            and <code className="font-mono text-xs">docs/DEPLOY-VERCEL.md</code>{" "}
+            for the PostgreSQL setup.
           </p>
         </CardContent>
       </Card>
