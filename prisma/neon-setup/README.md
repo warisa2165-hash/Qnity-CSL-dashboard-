@@ -50,9 +50,13 @@ Then set `DATA_SOURCE=prisma`, `DATABASE_URL` and `DIRECT_URL` in Vercel for
 
 ## If something goes wrong
 
+`01-schema.sql` is safe to run as many times as you like — every statement is
+guarded, so a second run fills in whatever is missing and skips the rest. It
+only ever creates; it never touches data.
+
 | Message | What it means |
 |---|---|
-| `relation "..." already exists` | `01-schema.sql` has already been run. Skip to step 3. |
+| `type "..." already exists` | You are on an older copy of this file. Re-copy it from GitHub — the current one handles this. |
 | `duplicate key value violates unique constraint` | `02-data.sql` has already been run. The database is loaded; check with the query above. |
 | Anything else during `02-data.sql` | Nothing was written — the whole file is one transaction. Fix the cause and paste it again. |
 
