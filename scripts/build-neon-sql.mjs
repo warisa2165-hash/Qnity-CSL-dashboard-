@@ -121,6 +121,11 @@ function dumpData(table) {
       url,
       "--data-only",
       "--column-inserts",
+      // Batching rows into one statement per table roughly halves the file.
+      // That matters: this is pasted by hand into a browser editor, often on
+      // a tablet, where a smaller payload is a more reliable one. Column
+      // names are still emitted, so the inserts stay order-independent.
+      "--rows-per-insert=200",
       "--no-owner",
       "--no-privileges",
       "--table",
@@ -222,7 +227,8 @@ BEGIN;
 let rowTotal = 0;
 for (const table of TABLE_ORDER) {
   const body = dumpData(table);
-  const rows = (body.match(/^INSERT INTO/gm) ?? []).length;
+  // With batching, one INSERT covers many rows — count the value tuples.
+  const rows = (body.match(/^\t\(/gm) ?? []).length;
   rowTotal += rows;
   data += `\n-- ${table} (${rows} row${rows === 1 ? "" : "s"})\n`;
   data += rows ? `${body}\n` : `-- (empty)\n`;

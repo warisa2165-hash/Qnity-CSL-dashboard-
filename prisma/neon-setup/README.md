@@ -9,6 +9,10 @@ including an iPad.
 | `01-schema.sql` | Creates all 26 tables, enums, indexes and foreign keys |
 | `02-data.sql` | Loads the QNITY 2026 baseline — 346 rows |
 
+Rows are batched into one `INSERT` per table, which keeps the second file
+around 110 KB rather than 170 KB — it is pasted by hand into a browser, often
+on a tablet, and a smaller payload is a more reliable one.
+
 This is the alternative to `npm run db:setup`. The result is identical: after
 running both, `npx prisma migrate status` reports *"Database schema is up to
 date"*, so a developer can still use the normal tooling later.
@@ -17,7 +21,11 @@ date"*, so a developer can still use the normal tooling later.
 
 ## How to run them
 
-1. Neon Console → your project → **SQL Editor** (left menu).
+> Neon's onboarding leaves a sample `playing_with_neon` table behind. It is
+> harmless and unrelated; `DROP TABLE IF EXISTS playing_with_neon;` clears it.
+
+1. Neon Console → your project → **SQL Editor** (left menu), then **+** for a
+   new empty query tab.
 2. Open `01-schema.sql`, copy **everything**, paste, press **Run**.
    Expect it to finish with no red errors.
 3. Clear the editor. Open `02-data.sql`, copy everything, paste, **Run**.
