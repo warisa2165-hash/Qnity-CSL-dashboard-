@@ -104,6 +104,12 @@ npm run seed         # loads the QNITY 2026 baseline
 
 `npm run db:setup` runs both in one step.
 
+> **No Node.js, or not comfortable in a terminal?** There is a paste-only
+> path: [`prisma/neon-setup/`](../prisma/neon-setup/) holds the same schema
+> and baseline as two SQL files to run in the Neon SQL Editor. The result is
+> identical — `prisma migrate status` afterwards reports the schema up to
+> date, so the normal tooling still works later.
+
 The seed writes the same dataset the portal serves in mock mode — the real
 project structure, not placeholder rows:
 
